@@ -1,10 +1,11 @@
 <html>
 <head>
         <title>simple growth</title>
-        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+        <script src="jquery.min.js"></script>
+   		<script src="d3.v3.min.js"></script>
+        <script src="jsnetworkx.js"></script>
 </head>
 <body>
-
     <div style="position: absolute; box-shadow: 3px 3px 5px 5px #ccc; padding: 10px; background-color:rgba(255,255,255,0.7); z-index: 10">
         <h4>simple growth</h4>
         <table>
@@ -18,12 +19,8 @@
             <tr><td></td> <td></td></tr>
             <tr><td><button id="start">Start</button></td><td><button id="stop">Stop</button></td></tr>
             <tr><td><button id="cont">Continue</button></td><td></td></tr>
-
-        </table>
-        
+        </table>        
     </div>
-
-
     <div>
     	<svg id="svg" width="1000" height="500"> 
         </svg>
@@ -41,12 +38,13 @@
     var o={"x":w/2, "y":h/2}; //origin
     var g=0.1; //growth
     var prob=0.001; //probability of connection to form
-
+	var stoprad=3 // to multiple by rad for stopping point
+	
     // set default values for input
     $("#growth").val(g);
     $("#nodes").val(ndot);
     $("#prob").val(prob);
-
+	
     // function to add elements to SVG
     function makeSVG(tag, attrs) {
         var el=document.createElementNS("http://www.w3.org/2000/svg", tag);
@@ -112,6 +110,23 @@
          return r;
      };
 
+ 	// functions to calculate network measures:
+ 	// see: http://nbviewer.ipython.org/github/deep-introspection/My-Random-Notebooks/blob/master/Growing%20networks.ipynb
+ 	function graphMetrics(P) {
+ 		var G = new jsnx.Graph();
+ 		for (i=0; i<P.length; i++) {
+ 			G.addNodesFrom([i])
+ 			for (j=0; j<P[i].n.length; j++) {
+ 				G.addEdgesFrom([[i,P[i].n[j]]])
+ 			}
+ 		}
+ 		// To draw:
+ 		//jsnx.draw(G, {element: '#svg',  });
+ 		document.write("avg. clustering: ", jsnx.averageClustering(G))
+ 		// jsnx.shortestPathLength(i)._numberValues[i]._numberValues)
+ 		return G;
+ 	}
+
     // function to animate growth
     function animate() {
         // break loop if flag is true or radius exceeds threshold
@@ -163,12 +178,12 @@
 
             // update edges
             for (i=0; i<E.length; i++) {
+
                 $("#e"+i).attr("x1", P[E[i].a].x);
                 $("#e"+i).attr("y1", P[E[i].a].y);
                 $("#e"+i).attr("x2", P[E[i].b].x);
                 $("#e"+i).attr("y2", P[E[i].b].y); 
             };
-
             // make new connections
             for (i=0; i<P.length; i++) {
                 //compute distance to other dots
@@ -200,11 +215,7 @@
                 };
             };
         };
-
-
-
     };
-
 
     var stopanimate=true;
 
@@ -225,6 +236,8 @@
 
     $("#stop").click(function(){
         stopanimate=true;
+		// This would be the place to print stats:
+		// G = graphMetrics(P)
     })
 
     $("#cont").click(function(){
@@ -233,9 +246,7 @@
         prob=parseFloat($("#prob").val());
         stopanimate=false;
         animate();
-    })
-    
-
+    });
     </script>
 </body>
 
