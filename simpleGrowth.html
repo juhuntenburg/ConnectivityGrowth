@@ -6,6 +6,9 @@
         <script src="jsnetworkx.js"></script>
 </head>
 <body>
+	<audio id="music">
+	  <source src="4_parallel_interface.mp3" type="audio/mpeg">
+	</audio>
     <div style="position: absolute; box-shadow: 3px 3px 5px 5px #ccc; padding: 10px; background-color:rgba(255,255,255,0.7); z-index: 10">
         <h4>simple growth</h4>
         <table>
@@ -19,7 +22,11 @@
             <tr><td></td> <td></td></tr>
             <tr><td><button id="start">Start</button></td><td><button id="stop">Stop</button></td></tr>
             <tr><td><button id="cont">Continue</button></td><td></td></tr>
-        </table>        
+		</table>        
+		<h4>stats</h4>
+		<table>
+			<tr><span id="stats"></span></tr>
+		</table>        
     </div>
     <div>
     	<svg id="svg" width="1000" height="500"> 
@@ -121,9 +128,9 @@
  			}
  		}
  		// To draw:
- 		//jsnx.draw(G, {element: '#svg',  });
- 		document.write("avg. clustering: ", jsnx.averageClustering(G))
+ 		// jsnx.draw(G, {element: '#svg',  });
  		// jsnx.shortestPathLength(i)._numberValues[i]._numberValues)
+		$("#stats").html("<p>avg. clustering: "+jsnx.averageClustering(G).toFixed(4)+"</p>")
  		return G;
  	}
 
@@ -131,7 +138,7 @@
     function animate() {
         // break loop if flag is true or radius exceeds threshold
         var new_rad = lenvec(subvec(P[E[0].a],o)); // calculate current radius
-        if (new_rad>10*rad || stopanimate==true) {
+        if (new_rad>10*rad || stopanimate==true) {			
             return P;
         } else {
             requestAnimationFrame(animate);
@@ -215,6 +222,7 @@
                 };
             };
         };
+		G = graphMetrics(P)
     };
 
     var stopanimate=true;
@@ -232,12 +240,12 @@
         r=rest(P,E);
         stopanimate=false;
         animate();
+		$("#music")[0].play();
     })
 
     $("#stop").click(function(){
         stopanimate=true;
-		// This would be the place to print stats:
-		// G = graphMetrics(P)
+		$("#music")[0].pause();
     })
 
     $("#cont").click(function(){
@@ -246,6 +254,7 @@
         prob=parseFloat($("#prob").val());
         stopanimate=false;
         animate();
+		$("#music")[0].play();
     });
     </script>
 </body>
