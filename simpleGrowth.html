@@ -1,7 +1,10 @@
 <html>
 <head>
         <title>simple growth</title>
-        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+        <script src="jquery.min.js"></script>
+   <script src="http://d3js.org/d3.v3.js"></script>
+        <script src="jsnetworkx.js"></script>
+//        <script src="d3.v3.min.js"></script> 
 </head>
 <body>
 
@@ -9,8 +12,6 @@
     	<svg id="svg" width="1000" height="500"> 
         </svg>
     </div>
-
-
 
     <script>
     // function to add elements to SVG
@@ -40,6 +41,23 @@
     function addvec(a, b) {
         return {"x":a.x+b.x, "y":a.y+b.y};
     }
+	
+	// functions to calculate network measures:
+	// see: http://nbviewer.ipython.org/github/deep-introspection/My-Random-Notebooks/blob/master/Growing%20networks.ipynb
+	function graphMetrics(P) {
+		var G = new jsnx.Graph();
+		for (i=0; i<P.length; i++) {
+			G.addNodesFrom([i])
+			for (j=0; j<P[i].n.length; j++) {
+				G.addEdgesFrom([[i,P[i].n[j]]])
+			}
+		}
+		// To draw:
+		jsnx.draw(G, {element: '#svg',  });
+		document.write("avg. clustering: ", jsnx.averageClustering(G))
+		// jsnx.shortestPathLength(i)._numberValues[i]._numberValues)
+		return G;
+	}
 
     // parameters
     var w=$("#svg").attr("width");
@@ -50,8 +68,8 @@
     var P=[]; // list of dots
     var E=[]; // list of edges
     var o={"x":w/2, "y":h/2}; //origin
-    var g=0.1; //growth
-
+    var g=0.1; // growth
+	var stoprad=3 // to multiple by rad for stopping point.
 
     // initiating dots
     for (i=0; i<ndot; i++) {
@@ -84,8 +102,9 @@
         
         // break loop when radius has multiplied by a certain amount
         var new_rad = lenvec(subvec(P[E[0].a],o)); // calculate current radius
-        if (new_rad>10*rad) {
-            return;
+        if (new_rad>stoprad*rad) {
+			var G = graphMetrics(P);
+			return; 
         }
 
         requestAnimationFrame(animate);
@@ -149,7 +168,8 @@
                     if ($.inArray(j, P[i].n)==-1) {
                         var connvec = subvec(P[j],P[i]);
                         var connlen = lenvec(connvec);
-                        console.log(connlen)
+//                        console.log(connlen)
+
                         if (connlen <= 5*r) {
                             
 
@@ -163,17 +183,14 @@
                         $("#c"+i+j).attr("y1", P[i].y);
                         $("#c"+i+j).attr("x2", P[j].x);
                         $("#c"+i+j).attr("y2", P[j].y); 
-                    };
+                    };					
                 };
             };
+
         };
-
-
-
-    };
-
-    animate();
-
+    };	
+	
+	animate();
     </script>
 </body>
 
