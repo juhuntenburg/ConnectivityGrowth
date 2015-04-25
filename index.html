@@ -1,9 +1,10 @@
 <html>
 <head>
-        <title>simple growth</title>
-        <script src="jquery.min.js"></script>
-   		<script src="d3.v3.min.js"></script>
-        <script src="jsnetworkx.js"></script>
+    <title>simple growth</title>
+    <script src="jquery.min.js"></script>
+	<script src="d3.v3.min.js"></script>
+    <script src="jsnetworkx.js"></script>
+	<script src="protovis.js"></script>
 </head>
 <body>
 	<audio id="music">
@@ -25,15 +26,25 @@
 		</table>        
 		<h4>stats</h4>
 		<table>
-			<tr><span id="stats"></span></tr>
+            <tr>
+				<td><button id="compute">Compute</button></td>
+				<td><button id="viz">Vis</button></td>
+			</tr>          
+			<tr>
+				<td><button id="download">Download</button></td>
+				<td></td>
+			</tr>
+	 		<tr><span id="stats"></span></tr>
 		</table>        
     </div>
     <div>
-    	<svg id="svg" width="1000" height="500"> 
+    	<svg id="svg" width="1000" height="400"> 
         </svg>
     </div>
+	<div id="matrix-div" style="position: absolute; left: 10px; width:45%; height:400px; box-shadow: 3px 3px 5px 5px #ccc; padding: 10px; background-color:rgba(255,255,255,0.7); z-index: 10"></div>
+	<div id="force-div" style="position: relative; left: 50%; width:45%; height:400px; box-shadow: 3px 3px 5px 5px #ccc; padding: 10px; background-color:rgba(255,255,255,0.7); z-index: 10"></div>
 
-    <script>
+    <script type="text/javascript+protovis">
     // parameters
     var P=[]; // list of dots
     var E=[]; // list of edges
@@ -43,8 +54,8 @@
     var dotrad=3; // radius of the dots
     var ndot=4; //number of initial dots
     var o={"x":w/2, "y":h/2}; //origin
-    var g=0.1; //growth
-    var prob=0.001; //probability of connection to form
+    var g=0.5; //growth
+    var prob=0.01; //probability of connection to form
 	var stoprad=3 // to multiple by rad for stopping point
 	
     // set default values for input
@@ -130,10 +141,46 @@
  		// To draw:
  		// jsnx.draw(G, {element: '#svg',  });
  		// jsnx.shortestPathLength(i)._numberValues[i]._numberValues)
-		$("#stats").html("<p>avg. clustering: "+jsnx.averageClustering(G).toFixed(4)+"</p>")
  		return G;
  	}
+	
+	function globalefficiency(G) {
+		var inv_lengths = [];
+		for (node=0; node<G.numberOfNodes(); node++) {
+			lengths = jsnx.singleSourceShortestPathLength(G,node)._numberValues;
+			//lengths = lengths[0];
+			inv = $.map(lengths,function(i) {return 1/i});
+			inv_lengths = $.extend(inv_lengths, inv);
+		} 
+		var total = 0;
+		$.map(inv_lengths, function(ind){
+			if (ind!=Infinity) {total = total + ind;}
+		});
+		return total/(G.numberOfNodes()*(G.numberOfNodes()-1));
+	}
 
+	function localefficiency(G) {
+		var efficiencies = [];
+		for (node=0; node<G.numberOfNodes(); node++) {
+			var temp_G = new jsnx.Graph();
+			temp_G.addNodesFrom(G.neighbors(node));
+			for (nei=0; nei<temp_G.numberOfNodes(); nei++) {
+				temp_G.addEdgesFrom(G.edges(nei));
+			}
+			efficiencies[node] = globalefficiency(temp_G);
+		}
+		return efficiencies		 
+	}
+
+	function avglocalefficiency(Gx) {		
+		eff = localefficiency(Gx)
+		var total = 0;
+		$.map(eff, function(ind){
+			if (ind!=Infinity) {total = total + ind;}
+		});
+		return total/Gx.numberOfNodes();
+	}
+	
     // function to animate growth
     function animate() {
         // break loop if flag is true or radius exceeds threshold
@@ -222,7 +269,7 @@
                 };
             };
         };
-		G = graphMetrics(P)
+		G = graphMetrics(P)	
     };
 
     var stopanimate=true;
@@ -256,6 +303,81 @@
         animate();
 		$("#music")[0].play();
     });
+	
+	$("#compute").click(function(){
+		$("#stats").html("<p>avg. clustering: "+jsnx.averageClustering(G).toFixed(4)+
+		"<br>glob. eff.:      "+globalefficiency(G).toFixed(4)+
+		"<br>avg. local eff.: "+avglocalefficiency(G).toFixed(4)+"</p>")
+	});
+	
+	$("#viz").click(function(){
+		// Structure data for input to protovis
+		G = graphMetrics(P);
+		var nodes = [];
+		var links = [];
+		for (i=0; i<G.nodes().length; i++) {
+			nodes[i]={"nodeName":G.nodes()[i], "group":1};
+		};
+		for (i=0; i<G.edges().length; i++) {
+	  	links[i] = {"source":G.edges()[i][0], "target":G.edges()[i][1], "value":"1"};
+		};
+		var mis = {nodes, links};
+
+		// http://mbostock.github.io/protovis/ex/matrix.html	
+		var color = pv.Colors.category19().by(function(d) {d.group});
+			
+		var visM = new pv.Panel()
+			.canvas('matrix-div');
+
+		var layoutM = visM.add(pv.Layout.Matrix)
+		    .nodes(mis.nodes)
+		    .links(mis.links);
+
+
+		layoutM.label.add(pv.Label)
+		    .textStyle(color);
+	
+		layoutM.link.add(pv.Bar)
+//			.fillStyle(function(l) {l.linkValue(
+//	        ? ((l.targetNode.group == l.sourceNode.group)
+//			{color(l.sourceNode):"#555"})}
+	    	.antialias(false)
+			.lineWidth(1);
+		
+		visM.render();
+
+
+		// http://mbostock.github.io/protovis/ex/force.html		
+		var	colorsF = pv.Colors.category19();
+
+		var visF = new pv.Panel()
+			.canvas('force-div')
+			.width(400)
+			.height(400)
+			.fillStyle("white")
+		   .event("mousedown", pv.Behavior.pan())
+		   .event("mousewheel", pv.Behavior.zoom());
+
+		var forceF = visF.add(pv.Layout.Force)
+		    .nodes(mis.nodes)
+		    .links(mis.links);
+								
+		forceF.link.add(pv.Line);
+
+		forceF.node.add(pv.Dot)
+			.size(function(d) (10)) //d.linkDegree / G.numberOfNodes()))
+		    .fillStyle(function(d) d.fix ? "brown" : colorsF(d.group))		
+			//.strokeStyle(function() this.fillStyle())
+			.lineWidth(1)
+			.title(function(d) d.nodeName)
+		    .event("mousedown", pv.Behavior.drag())
+			.event("drag", forceF);
+
+			
+		visF.render();		
+	});
+	
+	$("#download").click(function(){	
+	});	
     </script>
 </body>
-
