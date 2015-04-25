@@ -31,6 +31,9 @@
 				<td><button id="compute">Compute</button></td>
 				<td><button id="viz">Vis</button></td>
 			</tr>          
+            <tr>
+                <td>Cluster Number: </td> <td><input type="text" id="clustNum" maxlength="3" size="3"/></td>
+            </tr>                      
 			<tr>
 				<td><button id="download">Download</button></td>
 				<td></td>
@@ -58,12 +61,13 @@
     var g=0.5; //growth
     var prob=0.01; //probability of connection to form
 	var stoprad=3; // to multiple by rad for stopping point
-    var clustNum = 3; // number of cluster for k-means in vis
+    var clustNum=3; // number of cluster for k-means in vis
 	
     // set default values for input
     $("#growth").val(g);
     $("#nodes").val(ndot);
     $("#prob").val(prob);
+    $("#clustNum").val(clustNum);
 	
     // function to add elements to SVG
     function makeSVG(tag, attrs) {
@@ -327,7 +331,8 @@
             for (h=0; h<vec.length; h++) {                     
                 vectors[j][[vec[h]]] = 1;
             }
-        }                
+        }         
+        clustNum=parseFloat($("#clustNum").val());       
         var clust = figue.kmeans(clustNum, vectors);
         var clustlabels = clust.assignments;
 
