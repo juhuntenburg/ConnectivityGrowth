@@ -57,7 +57,8 @@
     var o={"x":w/2, "y":h/2}; //origin
     var g=0.5; //growth
     var prob=0.01; //probability of connection to form
-	var stoprad=3 // to multiple by rad for stopping point
+	var stoprad=3; // to multiple by rad for stopping point
+    var clustNum = 3; // number of cluster for k-means in vis
 	
     // set default values for input
     $("#growth").val(g);
@@ -228,7 +229,7 @@
                 P[i].x=pvec.x // update point
                 P[i].y=pvec.y
                 $("#p"+i).attr("cx", P[i].x);
-                $("#p"+i).attr("cy", P[i].y);
+                $("#p"+i).attr("cy", P[i].y);                
             };
 
             // update edges
@@ -326,10 +327,9 @@
             for (h=0; h<vec.length; h++) {                     
                 vectors[j][[vec[h]]] = 1;
             }
-        }        
-        var clustNum = 3;
+        }                
         var clust = figue.kmeans(clustNum, vectors);
-        var clustlabels = clust.assignments + 1;
+        var clustlabels = clust.assignments;
 
         var nodes = [];
 		var links = [];		
@@ -343,31 +343,31 @@
       
 
 		// http://mbostock.github.io/protovis/ex/matrix.html	
-		var color = pv.Colors.category19().by(function(d) {d.group});
-			
-		var visM = new pv.Panel()
+		var colorsF = pv.Colors.category10();
+		
+        var visM = new pv.Panel()
 			.canvas('matrix-div');
 
 		var layoutM = visM.add(pv.Layout.Matrix)
 		    .nodes(mis.nodes)
-		    .links(mis.links);
+		    .links(mis.links)
+            .sort(function(a, b) {b.group - a.group});
 
-
-		layoutM.label.add(pv.Label)
-		    .textStyle(color);
-	
 		layoutM.link.add(pv.Bar)
-//			.fillStyle(function(l) {l.linkValue(
-//	        ? ((l.targetNode.group == l.sourceNode.group)
-//			{color(l.sourceNode):"#555"})}
+			.fillStyle(function(l) {return l.linkValue
+	        ? ((l.targetNode.group == l.sourceNode.group)
+			? colorsF(l.sourceNode):colorsF(l.sourceNode.group)):"#eee"})
 	    	.antialias(false)
 			.lineWidth(1);
 		
+        // Labels NOT properly added yet
+        layoutM.label.add(pv.Label)
+            .textStyle(colorsF.by(function(d) {d.group}));
+
 		visM.render();
 
 
 		// http://mbostock.github.io/protovis/ex/force.html		
-		var	colorsF = pv.Colors.category19();
 
 		var visF = new pv.Panel()
 			.canvas('force-div')
@@ -385,15 +385,22 @@
 
 		forceF.node.add(pv.Dot)
 			.size(20)         
-		    .fillStyle(function(d) {d.fix ? "brown" : colorsF(d.group)})
-			//.strokeStyle(function() this.fillStyle())
+		    .fillStyle(function(d){return colorsF(d.group)})
+			.strokeStyle("#ddd") //function() this.fillStyle())
 			.lineWidth(1)
+            .antialias(false)
 			//.title(function(d) {return d.nodeName})
 		    .event("mousedown", pv.Behavior.drag())
 			.event("drag", forceF);
 
 			
-		visF.render();		
+		visF.render();	
+
+        // Recolor main view nodes
+        for (i=0; i<P.length; i++) {
+                $("#p"+i).attr("fill",colorsF(clustlabels[i]).color);  
+                $("#p"+i).attr("r",5);                              
+        };       
 	});
 	
 	$("#download").click(function(){	
