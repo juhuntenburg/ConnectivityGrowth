@@ -12,9 +12,11 @@
     <div style="position: absolute; box-shadow: 3px 3px 5px 5px #ccc; padding: 10px; background-color:rgba(255,255,255,0.7); z-index: 10">
         <h4>simple growth</h4>
         <table>
-            <tr><td>Growth rate:    </td> <td><input type="text" id="growth" maxlength="5" size="5"/></td></tr>
-            <tr><td>Initial nodes:  </td> <td><input type="text" id="nodes" maxlength="5" size="5" /></td></tr>
-            <tr><td>p Connection:   </td> <td><input type="text" id="prob" maxlength="5" size="5"/></td></tr>
+            <tr><td>Growth rate:</td> <td><input type="text" id="growth" maxlength="5" size="5"/></td></tr>
+            <tr><td>Initial nodes:</td> <td><input type="text" id="nodes" maxlength="5" size="5" /></td></tr>
+            <tr><td>p Connection:</td> <td><input type="text" id="prob" maxlength="5" size="5"/></td></tr>
+            <tr><td>max Distance:</td> <td><input type="text" id="dist" maxlength="5" size="5"/></td></tr>
+            <tr><td>Skew:</td> <td><input type="text" id="skew" maxlength="5" size="5"/></td></tr>
             <tr><td></td> <td></td></tr>
             <tr><td></td> <td></td></tr>
             <tr><td></td> <td></td></tr>
@@ -43,14 +45,18 @@
     var dotrad=3; // radius of the dots
     var ndot=4; //number of initial dots
     var o={"x":w/2, "y":h/2}; //origin
-    var g=0.1; //growth
-    var prob=0.001; //probability of connection to form
-	var stoprad=3 // to multiple by rad for stopping point
+    var g=0.5; //growth
+    var prob=0.01; //probability of connection to form
+	var stoprad=10 // to multiple by rad for stopping point
+    var dist=4 // to multiple by rad for stopping point
+    var skew=2 // 
 	
     // set default values for input
     $("#growth").val(g);
     $("#nodes").val(ndot);
     $("#prob").val(prob);
+    $("#dist").val(dist);
+    $("#skew").val(skew);
 	
     // function to add elements to SVG
     function makeSVG(tag, attrs) {
@@ -85,7 +91,7 @@
         // initiate dots
         for (i=0; i<ndot; i++) {
             var p={}; // single dot
-            p.x=w/2+rad*Math.cos(i*2*Math.PI/ndot);
+            p.x=w/2+skew*rad*Math.cos(i*2*Math.PI/ndot);
             p.y=h/2+rad*Math.sin(i*2*Math.PI/ndot);
             p.n=[];
             P.push(p);
@@ -136,9 +142,16 @@
 
     // function to animate growth
     function animate() {
+        
+        // update smallest radius
+        rad_minor=rad_minor*(1+(g/rad_minor));
+        rad_major=rad_major*(1+(g/rad_major));
+        //var new_rad_minor=Math.sqrt(Math.pow((skewx*new_rad*Math.cos(Math.PI/2)),2)+Math.pow((skewy*new_rad*Math.sin(Math.PI/2)),2))
+        //var new_rad_major=Math.sqrt(Math.pow((skewx*new_rad*Math.cos(0)),2)+Math.pow((skewy*new_rad*Math.sin(0)),2))
+        //var new_rad = lenvec(subvec(P[E[0].a],o)); 
+        
         // break loop if flag is true or radius exceeds threshold
-        var new_rad = lenvec(subvec(P[E[0].a],o)); // calculate current radius
-        if (new_rad>10*rad || stopanimate==true) {			
+        if (rad_major>stoprad*rad || stopanimate==true) {			
             return P;
         } else {
             requestAnimationFrame(animate);
@@ -146,10 +159,16 @@
                 // inserting new points if required 
                 var l = lenvec(subvec(P[E[i].a], P[E[i].b])); // calculating edge length
                 if (l>=2*r) {
-                    var newp=addvec(subvec(P[E[i].a],o), subvec(P[E[i].b],o)); // adding neighbouring points
+                    var newp=addvec(subvec(P[E[i].a],o), subvec(P[E[i].b],o)); // vector between neighbouring points
                     var len_newp=lenvec(newp); // calculating length of new vector
                     newp=mulvec(newp, 1/len_newp); // divide by length to  get only direction
-                    newp=mulvec(newp,new_rad);  // multiply by current radius
+
+                    // calculate angle of new point via normalized vector
+                    theta_newp=Math.atan2(newp.y, newp.x)
+                    // calculate radius at the new point
+                    rad_newp=Math.sqrt(Math.pow((rad_major*Math.cos(theta_newp)),2)+Math.pow((rad_minor*Math.sin(theta_newp)),2))
+                    newp=mulvec(newp,rad_newp);  // multiply by radius at this angle
+
                     newp=addvec(newp,o); // add origin
                     newp.n=[]; // add empty neighbour lis
                     P.push(newp); // new point is added to the end of the list
@@ -172,7 +191,7 @@
                 };
             };
 
-            // update dots
+            // grow, update dots
             for (i=0; i<P.length; i++) {
                 var pvec=subvec(P[i], o); // vector from origin to point
                 pvec=mulvec(pvec, 1+(g/lenvec(pvec))); // make vector grow
@@ -202,7 +221,7 @@
                         if ($.inArray(j, P[i].n)==-1) {
                             var connvec = subvec(P[j],P[i]);
                             var connlen = lenvec(connvec);
-                            if (connlen <= 4*r) {
+                            if (connlen <= dist*r) {
                                 // roll a dice if connection will be drawn
                                 dice=Math.random()
                                 if (dice <= prob) {
@@ -232,12 +251,17 @@
         g=parseFloat($("#growth").val());
         ndot=parseFloat($("#nodes").val());
         prob=parseFloat($("#prob").val());
+        dist=parseFloat($("#dist").val());
+        skew=parseFloat($("#skew").val());
+        stopanimate=false;
         $("#svg").empty();
         P=[];
         E=[];
         P=initdot();
         E=initedge(P);
         r=rest(P,E);
+        rad_minor=rad;
+        rad_major=rad*skew;
         stopanimate=false;
         animate();
 		$("#music")[0].play();
@@ -252,6 +276,8 @@
         g=parseFloat($("#growth").val());
         ndot=parseFloat($("#nodes").val());
         prob=parseFloat($("#prob").val());
+        dist=parseFloat($("#dist").val());
+        skew=parseFloat($("#skew").val());
         stopanimate=false;
         animate();
 		$("#music")[0].play();
