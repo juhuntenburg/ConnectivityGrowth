@@ -104,8 +104,8 @@
         // initiate dots
         for (i=0; i<ndot; i++) {
             var p={}; // single dot
-            p.x=w/2+rad*Math.cos(i*2*Math.PI/ndot);
-            p.y=h/2+rad*Math.sin(i*2*Math.PI/ndot);
+            p.x=o.x+rad*Math.cos(i*2*Math.PI/ndot);
+            p.y=o.y+rad*Math.sin(i*2*Math.PI/ndot);
             p.n=[];
             P.push(p);
             dot=makeSVG('circle', {id:"p"+i, cx:p.x, cy:p.y, r:dotrad, fill:"grey", stroke:"grey"});
