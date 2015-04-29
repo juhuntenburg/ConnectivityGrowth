@@ -1,9 +1,11 @@
 <html>
 <head>
-        <title>simple growth</title>
-        <script src="jquery.min.js"></script>
-   		<script src="d3.v3.min.js"></script>
-        <script src="jsnetworkx.js"></script>
+    <title>simple growth</title>
+    <script src="jquery-2.1.3.js"></script>
+	<script src="d3.v3.min.js"></script>
+    <script src="jsnetworkx.js"></script>
+	<script src="protovis.js"></script>
+    <script src="figue.js"></script>
 </head>
 <body>
 	<audio id="music">
@@ -25,13 +27,28 @@
 		</table>        
 		<h4>stats</h4>
 		<table>
-			<tr><span id="stats"></span></tr>
-		</table>        
+            <tr>
+				<td><button id="compute">Compute</button></td>
+				<td><button id="viz">Vis</button></td>
+			</tr>          
+            <tr>
+                <td>Cluster Number: </td> <td><input type="text" id="clustNum" maxlength="3" size="3"/></td>
+            </tr>                      
+			<tr>
+				<td><button id="download">Download</button></td>
+				<td></td>
+			</tr>
+        </table> 
+        <table>
+	 		<tr><span id="stats"></span></tr>
+		</table> 
     </div>
     <div>
-    	<svg id="svg" width="1000" height="500"> 
+    	<svg id="svg" width="1000" height="400"> 
         </svg>
     </div>
+	<div id="matrix-div" style="position: absolute; left: 10px; width:45%; height:400px; box-shadow: 3px 3px 5px 5px #ccc; padding: 10px; background-color:rgba(255,255,255,0.7); z-index: 10"></div>
+	<div id="force-div" style="position: relative; left: 50%; width:45%; height:400px; box-shadow: 3px 3px 5px 5px #ccc; padding: 10px; background-color:rgba(255,255,255,0.7); z-index: 10"></div>
 
     <script>
     // parameters
@@ -43,14 +60,16 @@
     var dotrad=3; // radius of the dots
     var ndot=4; //number of initial dots
     var o={"x":w/2, "y":h/2}; //origin
-    var g=0.1; //growth
-    var prob=0.001; //probability of connection to form
-	var stoprad=3 // to multiple by rad for stopping point
+    var g=0.5; //growth
+    var prob=0.01; //probability of connection to form
+	var stoprad=3; // to multiple by rad for stopping point
+    var clustNum=3; // number of cluster for k-means in vis
 	
     // set default values for input
     $("#growth").val(g);
     $("#nodes").val(ndot);
     $("#prob").val(prob);
+    $("#clustNum").val(clustNum);
 	
     // function to add elements to SVG
     function makeSVG(tag, attrs) {
@@ -85,8 +104,8 @@
         // initiate dots
         for (i=0; i<ndot; i++) {
             var p={}; // single dot
-            p.x=w/2+rad*Math.cos(i*2*Math.PI/ndot);
-            p.y=h/2+rad*Math.sin(i*2*Math.PI/ndot);
+            p.x=o.x+rad*Math.cos(i*2*Math.PI/ndot);
+            p.y=o.y+rad*Math.sin(i*2*Math.PI/ndot);
             p.n=[];
             P.push(p);
             dot=makeSVG('circle', {id:"p"+i, cx:p.x, cy:p.y, r:dotrad, fill:"grey", stroke:"grey"});
@@ -130,10 +149,46 @@
  		// To draw:
  		// jsnx.draw(G, {element: '#svg',  });
  		// jsnx.shortestPathLength(i)._numberValues[i]._numberValues)
-		$("#stats").html("<p>avg. clustering: "+jsnx.averageClustering(G).toFixed(4)+"</p>")
  		return G;
  	}
+	
+	function globalefficiency(G) {
+		var inv_lengths = [];
+		for (node=0; node<G.numberOfNodes(); node++) {
+			lengths = jsnx.singleSourceShortestPathLength(G,node)._numberValues;
+			//lengths = lengths[0];
+			inv = $.map(lengths,function(i) {return 1/i});
+			inv_lengths = $.extend(inv_lengths, inv);
+		} 
+		var total = 0;
+		$.map(inv_lengths, function(ind){
+			if (ind!=Infinity) {total = total + ind;}
+		});
+		return total/(G.numberOfNodes()*(G.numberOfNodes()-1));
+	}
 
+	function localefficiency(G) {
+		var efficiencies = [];
+		for (node=0; node<G.numberOfNodes(); node++) {
+			var temp_G = new jsnx.Graph();
+			temp_G.addNodesFrom(G.neighbors(node));
+			for (nei=0; nei<temp_G.numberOfNodes(); nei++) {
+				temp_G.addEdgesFrom(G.edges(nei));
+			}
+			efficiencies[node] = globalefficiency(temp_G);
+		}
+		return efficiencies		 
+	}
+
+	function avglocalefficiency(Gx) {		
+		eff = localefficiency(Gx)
+		var total = 0;
+		$.map(eff, function(ind){
+			if (ind!=Infinity) {total = total + ind;}
+		});
+		return total/Gx.numberOfNodes();
+	}
+	
     // function to animate growth
     function animate() {
         // break loop if flag is true or radius exceeds threshold
@@ -180,7 +235,7 @@
                 P[i].x=pvec.x // update point
                 P[i].y=pvec.y
                 $("#p"+i).attr("cx", P[i].x);
-                $("#p"+i).attr("cy", P[i].y);
+                $("#p"+i).attr("cy", P[i].y);                
             };
 
             // update edges
@@ -222,7 +277,7 @@
                 };
             };
         };
-		G = graphMetrics(P)
+		G = graphMetrics(P)	
     };
 
     var stopanimate=true;
@@ -256,6 +311,106 @@
         animate();
 		$("#music")[0].play();
     });
+	
+	$("#compute").click(function(){
+		$("#stats").html("<p>avg. clustering: "+jsnx.averageClustering(G).toFixed(4)+
+		"<br>glob. eff.:      "+globalefficiency(G).toFixed(4)+
+		"<br>avg. local eff.: "+avglocalefficiency(G).toFixed(4)+"</p>")
+	});
+	
+	$("#viz").click(function(){
+		// Structure data for input to protovis
+		G = graphMetrics(P);
+        var labels = [];
+        var vectors = [];
+        for (var j = 0 ; j < G.numberOfNodes(); j++) {
+            labels[j] = j;
+            var vec = []
+            for (k=0; k<P[j].n.length; k++) {
+                vec.push(P[j].n[k]);
+            }
+            vectors[j] = Array.apply(null, new Array(G.numberOfNodes())).map(Number.prototype.valueOf,0); 
+            for (h=0; h<vec.length; h++) {                     
+                vectors[j][[vec[h]]] = 1;
+            }
+        }         
+        clustNum=parseFloat($("#clustNum").val());       
+        var clust = figue.kmeans(clustNum, vectors);
+        var clustlabels = clust.assignments;
+
+        var nodes = [];
+		var links = [];		
+        for (i=0; i<G.nodes().length; i++) {
+			nodes[i]={"nodeName":G.nodes()[i], "group":clustlabels[i]};
+		};
+		for (i=0; i<G.edges().length; i++) {
+	  	    links[i] = {"source":G.edges()[i][0], "target":G.edges()[i][1], "value":"1"};
+		};
+		var mis = {nodes, links};
+      
+
+		// http://mbostock.github.io/protovis/ex/matrix.html	
+		var colorsF = pv.Colors.category10();
+		
+        var visM = new pv.Panel()
+			.canvas('matrix-div');
+
+		var layoutM = visM.add(pv.Layout.Matrix)
+		    .nodes(mis.nodes)
+		    .links(mis.links)
+            .sort(function(a, b) {b.group - a.group});
+
+		layoutM.link.add(pv.Bar)
+			.fillStyle(function(l) {return l.linkValue
+	        ? ((l.targetNode.group == l.sourceNode.group)
+			? colorsF(l.sourceNode):colorsF(l.sourceNode.group)):"#eee"})
+	    	.antialias(false)
+			.lineWidth(1);
+		
+        // Labels NOT properly added yet
+        layoutM.label.add(pv.Label)
+            .textStyle(colorsF.by(function(d) {d.group}));
+
+		visM.render();
+
+
+		// http://mbostock.github.io/protovis/ex/force.html		
+
+		var visF = new pv.Panel()
+			.canvas('force-div')
+			.width(400)
+			.height(400)
+			.fillStyle("white")
+		   .event("mousedown", pv.Behavior.pan())
+		   .event("mousewheel", pv.Behavior.zoom());
+
+		var forceF = visF.add(pv.Layout.Force)
+		    .nodes(mis.nodes)
+		    .links(mis.links);
+								
+		forceF.link.add(pv.Line);
+
+		forceF.node.add(pv.Dot)
+			.size(20)         
+		    .fillStyle(function(d){return colorsF(d.group)})
+			.strokeStyle("#ddd") //function() this.fillStyle())
+			.lineWidth(1)
+            .antialias(false)
+			//.title(function(d) {return d.nodeName})
+		    .event("mousedown", pv.Behavior.drag())
+			.event("drag", forceF);
+
+			
+		visF.render();	
+
+        // Recolor main view nodes
+        for (i=0; i<P.length; i++) {
+                $("#p"+i).attr("fill",colorsF(clustlabels[i]).color);  
+                $("#p"+i).attr("r",5);                              
+        };       
+	});
+	
+	$("#download").click(function(){	
+	});	
     </script>
 </body>
-
