@@ -1,9 +1,11 @@
 <html>
 <head>
         <title>ConnectivityGrowth</title>
-        <script src="jquery.min.js"></script>
-   		<script src="d3.v3.min.js"></script>
+        <script src="jquery-2.1.3.js"></script>
+        <script src="d3.v3.min.js"></script>
         <script src="jsnetworkx.js"></script>
+        <script src="protovis.js"></script>
+        <script src="figue.js"></script>
 </head>
 <body>
 	<audio id="music">
@@ -11,20 +13,35 @@
 	</audio>
 
     <div id="input-div" style="position: absolute; box-shadow: 3px 3px 5px 5px #ccc; padding: 10px; background-color:rgba(255,255,255,0.7); z-index: 10">
+        <h5>parameters</h5>
         <table  style="font:14px Garamond Serif">
-            <tr><td>growth rate:</td> <td><input style="font:12px Garamond" type="text" id="growth" maxlength="5" size="5"/></td></tr>
-            <tr><td>initial nodes:</td> <td><input style="font:12px Garamond" type="text" id="nodes" maxlength="5" size="5" /></td></tr>
-            <tr><td>p connection:</td> <td><input style="font:12px Garamond" type="text" id="prob" maxlength="5" size="5"/></td></tr>
-            <tr><td>max distance:</td> <td><input style="font:12px Garamond" type="text" id="dist" maxlength="5" size="5"/></td></tr>
-            <tr><td>skew:</td> <td><input style="font:12px Garamond" type="text" id="skew" maxlength="5" size="5"/></td></tr>
+            <tr><td>growth rate</td> <td><input style="font:12px Garamond" type="text" id="growth" maxlength="3" size="3"/></td></tr>
+            <tr><td>initial nodes</td> <td><input style="font:12px Garamond" type="text" id="nodes" maxlength="3" size="3" /></td></tr>
+            <tr><td>p connection</td> <td><input style="font:12px Garamond" type="text" id="prob" maxlength="3" size="3"/></td></tr>
+            <tr><td>max distance</td> <td><input style="font:12px Garamond" type="text" id="dist" maxlength="3" size="3"/></td></tr>
+            <tr><td>skew</td> <td><input style="font:12px Garamond" type="text" id="skew" maxlength="3" size="3"/></td></tr>
             <tr><td></td><td></td></tr>
             <tr><td></td><td></td></tr>
-            <tr><td><button id="start" style="font:12px Garamond">start</button></td><td><button id="stop" style="font:12px Garamond">stop</button></td></tr>
+            <tr>
+                <td><button id="start" style="font:12px Garamond">start</button></td>
+                <td><button id="stop" style="font:12px Garamond">stop</button></td>
+            </tr>
             <tr><td><button id="cont" style="font:12px Garamond">continue</button></td><td></td></tr>
-		</table>       
-		<table>
-			<tr><span id="stats" style="font:12px Garamond"></span></tr>
-		</table>        
+        </table>
+        <h5>stats</h5>
+        <table  style="font:14px Garamond Serif">
+            <tr><td>cluster</td><td><input type="text" id="clustNum" style="font:12px Garamond" maxlength="3" size="3"/></td></tr>
+            <tr>
+                <td><button id="compute" style="font:12px Garamond">compute</button></td>
+                <td><button id="viz" style="font:12px Garamond">vis</button></td>
+            </tr>
+            <tr><td><button id="download" style="font:12px Garamond">download</button></td><td></td></tr>
+            <tr><td></td><td></td></tr>
+            <tr><td></td><td></td></tr>
+		</table>
+        <table>
+            <tr><span id="stats" style="font:12px Garamond"></span></tr>
+        </table>       
     </div>
 
     <div id="svg-div">
@@ -32,7 +49,10 @@
         </svg>
     </div>
 
-    <div id="doc-div" style="position:absolute; right:10px; top:10px; height:600; width:450; font:14px Garamond;   text-align: justify; text-justify:inter-word; overflow:auto; box-shadow: 3px 3px 5px 5px #ccc; padding:20px; background-color:rgba(255,255,255,0.7); z-index: 20">
+    <div id="matrix-div" style="position:relative; top:90px; width:45%; height:400px; box-shadow: 3px 3px 5px 5px #ccc; padding: 10px; background-color:rgba(255,255,255,0.7);z-index="></div>
+
+
+    <div id="doc-div" style="position:absolute; right:10px; top:0px; height:900px; width:35%; font:14px Garamond;   text-align: justify; text-justify:inter-word; overflow:auto; box-shadow: 3px 3px 5px 5px #ccc; padding:20px; background-color:rgba(255,255,255,0.7); z-index: 20">
         <h3 style="text-align:left">modelling the impact of cortical growth, folding &amp regionalization on connectivity
         <h4>to do</h4>
          <ul>
