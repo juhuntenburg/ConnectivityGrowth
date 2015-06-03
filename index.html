@@ -40,7 +40,7 @@
             <tr><td></td><td></td></tr>
 		</table>
         <table>
-            <tr><span id="stats" style="font:12px Garamond"></span></tr>
+            <tr><span id="stats" style="font:12px Garamond"></span></tr
         </table>       
     </div>
 
@@ -61,20 +61,6 @@
             <li>integrate this version with master (network metrics)</li>
             <li><i>next:</i> elasticity and plasticity</li>
         </ul> 
-        <h4>background</h4>
-        <p></p>
-        <h4>idea</h4>
-        <p>Gradients or step changes in the mechanical properties of the surface are an option to model the impact of early cortical regionalization, e.g. architectonic differences, on the resulting connectivity patterns (cf. Toro &amp Burnod, 2005).</p>
-        <p>But also: time windows!! (Rakic, Kaiser &amp Hilgetag)</p>
-        <p>Once the surface starts folding it will be important to restrict the connections in a way, that only trajectories through the inner space of the model are considered when establishing new connections in order to prevent connections to form across sulci.</p>
-        <p>Once a working implementation in 2D exists, first analyses can be performed (see below). It is however the goal to advance the model into 3D space.</p>
-        <h4>analyses &amp data</h4>
-        <p>Jessica Dubios, Ferret, C.elegans, van Weeden?</p>
-        <h4>possible extensions</h4>
-        <p>From here, different extensions are conceivable. In the basic implementation all connections are implemented as straight lines. This has several implications: 1) with increasing folding the possibility to establish a straight connection between two nodes that completely lies within the model rapdily decreases, 2) existing connections do not deform along with the surface and overall: 3) no information about the actual trajectory of the connection in space is provided. Moreover, the model is deterministic, i.e. a connection either exists or does not exist. To address these potential limitations a different approach to modelling the connections could be to describe the entire space within the model in terms of small volume elements with a diffusion tensor. Connections are then established depending on the shortest path through these elements and therefore not necessarily straight. If a connection is established, the tensors of all elements it passes are updated according to the direction of the connection. In the end, the actual network is derived using a tract tracing algorithm on the tensors. This would represent a more probabilistic approach and provide geometrically meaningful connectivity.</p>
-        <p>Furthermore, the network derived from the model might be used as a structural basis to simulate functional dynamics and interactions of connected areas (in collaboration with Guillaume Dumas?). In that case, it would be possible to observe how the pattern of functional networks changes in the evolving model. Here, an even more complex growth model, integrating the increasing fibre myelination and their impact on signal transduction could provide another important perspective on the development of functional networks.</p>
-        <h4>references</h4>
-        <p>Toro, R., &amp Burnod, Y. (2005). A morphogenetic model for the development of cortical convolutions. <i>Cerebral Cortex</i>, 15(12), 1900-1913.</p>
     </div>
     <script src="model.js"></script>
 </body>
