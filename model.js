@@ -62,8 +62,8 @@ function initdot() {
         // perimeter ellipse:
         // 2*Math.PI*Math.sqrt((Math.pow(skew, 2)+Math.pow(1, 2))/2)
         // divide surface in equal pieces depending on number of dots
-        p.x=o.x+rad*Math.cos(i/ndot*2*Math.PI);
-        p.y=o.y+rad*Math.sin(i/ndot*2*Math.PI);
+        p.x=o.x+rad_major*Math.cos(i/ndot*2*Math.PI);
+        p.y=o.y+rad_minor*Math.sin(i/ndot*2*Math.PI);
         p.n=[];
         P.push(p);
         dot=makeSVG('circle', {id:"p"+i, cx:p.x, cy:p.y, r:dotrad, fill:"grey", stroke:"grey"});
@@ -158,7 +158,7 @@ function animate() {
     //var new_rad = lenvec(subvec(P[E[0].a],o));
 
     // break loop if flag is true or radius exceeds threshold
-    if (new_rad>stoprad*rad || stopanimate==true) {
+    if (rad_major>stoprad*rad || stopanimate==true) {
         return P;
     } else {
         requestAnimationFrame(animate);
