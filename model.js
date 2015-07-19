@@ -3,10 +3,7 @@ var P=[]; // list of dots
 var E=[]; // list of edges
 var w=$("#svg").attr("width");
 var h=$("#svg").attr("height");
-var rad=20; // initial minor radius of the model
-var skew=1 // skewness in x direction
-var rad_minor=rad
-var rad_major=skew*rad
+var rad=20; // initial radius of the model
 var dotrad=3; // radius of the dots
 var ndot=4; //number of initial dots
 var o={"x":w/2, "y":h/2}; //origin
@@ -22,7 +19,6 @@ $("#growth").val(g);
 $("#nodes").val(ndot);
 $("#prob").val(prob);
 $("#dist").val(dist);
-$("#skew").val(skew);
 $("#nclust").val(nclust);
 
 // function to add elements to SVG
@@ -59,12 +55,9 @@ function initdot() {
     // initiate dots
     for (i=0; i<ndot; i++) {
         var p={}; // single dot
-        // calculate perimeter (simplifies to 2Pi for unskewed circle)
-        //peri = 2*Math.PI*Math.sqrt((Math.pow(skew, 2)+Math.pow(1, 2))/2)
-        peri = 2*Math.PI
         // divide surface in equal pieces depending on number of dots
-        p.x=o.x+rad_major*Math.cos(i/ndot*peri);
-        p.y=o.y+rad_minor*Math.sin(i/ndot*peri);
+        p.x=o.x+rad*Math.cos(i/ndot*2*Math.PI);
+        p.y=o.y+rad*Math.sin(i/ndot*2*Math.PI);
         p.n=[];
         P.push(p);
         dot=makeSVG('circle', {id:"p"+i, cx:p.x, cy:p.y, r:dotrad, fill:"grey", stroke:"grey"});
@@ -151,11 +144,7 @@ function avglocalefficiency(Gx) {
 // function to animate growth
 function animate() {
 
-    // update smallest radius
-    //rad_minor=rad_minor*(1+(g/rad_minor));
-    //rad_major=rad_major*(1+(g/rad_major));
-    //var new_rad_minor=Math.sqrt(Math.pow((skewx*new_rad*Math.cos(Math.PI/2)),2)+Math.pow((skewy*new_rad*Math.sin(Math.PI/2)),2))
-    //var new_rad_major=Math.sqrt(Math.pow((skewx*new_rad*Math.cos(0)),2)+Math.pow((skewy*new_rad*Math.sin(0)),2))
+    // update radius
     var new_rad = lenvec(subvec(P[E[0].a],o));
 
     // break loop if flag is true or radius exceeds threshold
@@ -170,15 +159,7 @@ function animate() {
                 var newp=addvec(subvec(P[E[i].a],o), subvec(P[E[i].b],o)); // vector between neighbouring points
                 var len_newp=lenvec(newp); // calculating length of new vector
                 newp=mulvec(newp, 1/len_newp); // divide by length to  get only direction
-
-                // calculate angle of new point via normalized vector
-                //theta_newp=Math.atan2(newp.y, newp.x)
-                // calculate radius at the new point
-                //rad_newp=Math.sqrt(Math.pow((rad_major*Math.cos(theta_newp)),2)+Math.pow((rad_minor*Math.sin(theta_newp)),2))
-                //newp=mulvec(newp,rad_newp);  // multiply by radius at this angle
-
                 newp=mulvec(newp,new_rad);  // multiply by current radius
-
                 newp=addvec(newp,o); // add origin
                 newp.n=[]; // add empty neighbour lis
                 P.push(newp); // new point is added to the end of the list
@@ -262,9 +243,6 @@ $("#start").click(function(){
     ndot=parseFloat($("#nodes").val());
     prob=parseFloat($("#prob").val());
     dist=parseFloat($("#dist").val());
-    skew=parseFloat($("#skew").val());
-    rad_minor=rad;
-    rad_major=rad*skew;
     stopanimate=false;
     $("#svg").empty();
     P=[];
