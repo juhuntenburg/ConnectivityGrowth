@@ -3,16 +3,16 @@ var P=[]; // list of dots
 var E=[]; // list of edges
 var w=$("#svg").attr("width");
 var h=$("#svg").attr("height");
-var rad=100.6584; // initial minor radius of the model
+var rad=10; // initial minor radius of the model
 var skew=2 // skewness in x direction
 var rad_minor=rad;
 var rad_major=skew*rad
 var dotrad=3; // radius of the dots
-var ndot=20; //number of initial dots
+var ndot=6; //number of initial dots
 var o={"x":w/2, "y":h/2}; //origin
-var g=0.5; //growth
+var g=0.01; //growth
 var prob=0.01; //probability of connection to form
-var stoprad=10 // to multiply by rad for stopping point
+var stoprad=30 // to multiply by rad for stopping point
 var dist=4 // max distance of connections to form
 var nclust=3; // number of cluster for k-means in vis
 var G=[];
@@ -53,38 +53,58 @@ function addvec(a, b) {
     return {"x":a.x+b.x, "y":a.y+b.y};
 }
 
+// functions to initiate dots for circular model
+function initdot_circle() {
+    // initiate dots
+    for (i=0; i<ndot; i++) {
+        var p={}; // single dot
+        // divide surface in equal pieces depending on number of dots
+        p.x=o.x+rad_minor*Math.cos(i/ndot*2*Math.PI);
+        p.y=o.y+rad_minor*Math.sin(i/ndot*2*Math.PI);
+        p.n=[];
+        P.push(p);
+        dot=makeSVG('circle', {id:"p"+i, cx:p.x, cy:p.y, r:dotrad, fill:"grey", stroke:"grey"});
+        $("#svg")[0].appendChild(dot);
+    };
+    return P
+};
 
-function initdot() {
-    // calculate perimeter
-    var peri = 2*Math.PI*Math.sqrt((Math.pow(rad_major, 2)+Math.pow(rad_minor, 2))/2)
-    // divide by number of points to derive the length of every arc
+// function to initiate dots for ellipsoid model
+function initdot_ellipse() {
     var diff = 0
     var alpha = 0
     var arc_len = 0
     var delta = 0.00001
-    var p0 = {'x':o.x+rad_major,
-              'y':o.y+0}
-    // for each point
+
+    // approximate perimeter
+    var peri=0;
+    var p0 = {'x':o.x+rad_major, 'y':o.y+0};
+    for(t=0;t<=2*Math.PI;t+=delta) {
+        var p={x:o.x+rad_major*Math.cos(t),y:o.y+rad_minor*Math.sin(t)};
+        peri+=Math.sqrt(Math.pow(p.x-p0.x,2)+Math.pow(p.y-p0.y,2));
+        p0.x=p.x;
+        p0.y=p.y;
+    };
+
+    // reset starting point
+    p0 = {'x':o.x+rad_major,'y':o.y+0};
+    // approximate positions of points
     for (i=0; i<ndot; i++) {
         // set the desired arc length for this point
         var arc_goal = i*peri/ndot
-        console.log(arc_goal);
         // calculate current point
         var p = {'x':o.x+rad_major*Math.cos(alpha),
                  'y':o.y+rad_minor*Math.sin(alpha)}
-
         // calculate current length of arc
         arc_len = arc_len + Math.sqrt(Math.pow((p.x-p0.x),2) + Math.pow((p.y-p0.y),2));
         // if this is below the desried length
         while (arc_len < arc_goal){
             // store difference to desired length for case of overshoot
-            //diff = arc_goal - arc_len;
+            // diff = arc_goal - arc_len;
             // make current point the new p0
-            //p0.x = o.x+rad_major*Math.cos(alpha);
-            //p0.y = o.y+rad_minor*Math.sin(alpha);
-            // increase angle by small step
             p0.x=p.x;
             p0.y=p.y;
+            // increase angle by small step
             alpha = alpha + delta;
             // calculate new point on ellipse from this angle
             p.x = o.x+rad_major*Math.cos(alpha);
@@ -92,19 +112,18 @@ function initdot() {
             // update arclength
             arc_len = arc_len + Math.sqrt(Math.pow((p.x-p0.x),2) + Math.pow((p.y-p0.y),2));
         };
-        console.log(arc_len, alpha*180/Math.PI);
         // when the desired arc length has been overshot
-        //if (arc_len > arc_goal) {
+/*        if (arc_len > arc_goal) {
             // calculate overshoot
-        //    new_diff = arc_len - arc_goal;
+            new_diff = arc_len - arc_goal;
             // compare overshoot to last undershoot
-        //    new_delta = delta/(diff+new_diff)*diff;
+            new_delta = delta/(diff+new_diff)*diff;
             // multiply delta by this ration and recalculate p
-        //    alpha = alpha - delta;
-        //    alpha = alpha + new_delta;
-        //    p.x = o.x+rad_major*Math.cos(alpha);
-        //    p.y = o.y+rad_minor*Math.sin(alpha);
-        //};
+            alpha = alpha - delta;
+            alpha = alpha + new_delta;
+            p.x = o.x+rad_major*Math.cos(alpha);
+            p.y = o.y+rad_minor*Math.sin(alpha);
+        };*/
         // add dot to list and to svg
         p.n=[];
         P.push(p);
@@ -114,22 +133,15 @@ function initdot() {
     return P
 };
 
-
-// function to initiate dots
-// THIS NEEDS TO BE FIXED FOR ELLIPSES!
-//function initdot() {
-    // initiate dots
-//    for (i=0; i<ndot; i++) {
-//        var p={}; // single dot
-//        p.x=o.x+rad_major*Math.cos(i/ndot*2*Math.PI);
-//        p.y=o.y+rad_minor*Math.sin(i/ndot*2*Math.PI);
-//        p.n=[];
-//        P.push(p);
-//        dot=makeSVG('circle', {id:"p"+i, cx:p.x, cy:p.y, r:dotrad, fill:"grey", stroke:"grey"});
-//        $("#svg")[0].appendChild(dot);
-//    };
-//    return P
-//};
+// metafunction to select which to use
+function initdot() {
+    if (rad_major==rad_minor) {
+        P=initdot_circle();
+    } else if (rad_major>=rad_minor) {
+        P=initdot_ellipse();
+    };
+    return P
+};
 
 // function to initiate edges
 function initedge(P) {
@@ -210,21 +222,21 @@ function avglocalefficiency(Gx) {
 function animate() {
 
     // update radius
-    rad_minor=rad_minor*(1+(g/rad_minor));
-    rad_major=rad_major*(1+(g/rad_major));
-    //var  new_rad_minor=Math.sqrt(Math.pow((skewx*new_rad*Math.cos(Math.PI/2)),2)+Math.pow((skewy*new_rad*Math.sin(Math.PI/2)),2))
-    //var new_rad_major=Math.sqrt(Math.pow((skewx*new_rad*Math.cos(0)),2)+Math.pow((skewy*new_rad*Math.sin(0
+    rad_minor=rad_minor*(1+g);
+    rad_major=rad_major*(1+g);
+    //rad_minor=rad_minor*(1+(g/lenvec(pvec)));
+    //rad_minor=rad_minor*(1+(g/lenvec(pvec)));
     //var new_rad = lenvec(subvec(P[E[0].a],o));
 
     // break loop if flag is true or radius exceeds threshold
-    if (rad_minor>stoprad*rad || stopanimate==true) {
+    if (rad_major>stoprad*rad || stopanimate==true) {
         return P;
     } else {
         requestAnimationFrame(animate);
         for (i=0; i<E.length; i++) {
             // inserting new points if required
             var l = lenvec(subvec(P[E[i].a], P[E[i].b])); // calculating edge length
-            if (l>=2*r) {
+/*            if (l>=2*r) {
                 var newp=addvec(subvec(P[E[i].a],o), subvec(P[E[i].b],o)); // vector between neighbouring points
                 var len_newp=lenvec(newp); // calculating length of new vector
                 newp=mulvec(newp, 1/len_newp); // divide by length to get only direction
@@ -255,14 +267,14 @@ function animate() {
                 // add new edges
                 line=makeSVG('line', {id:"e"+(E.length-1), x1:P[E[E.length-1].a].x, y1:P[E[E.length-1].a].y, x2:P[E[E.length-1].b].x, y2:P[E[E.length-1].b].y, stroke:"grey"});
                 $("#svg")[0].appendChild(line);
-            };
+            };*/
         };
 
         // grow, update dots
-        // THIS NEEDS TO BE FIXED FOR ELLIPSE SO THAT X AND Y GROW INDEPENDENTLY
         for (i=0; i<P.length; i++) {
             var pvec=subvec(P[i], o); // vector from origin to point
-            pvec=mulvec(pvec, 1+(g/lenvec(pvec))); // make vector grow
+            pvec=mulvec(pvec, 1+g); // make vector grow
+            // pvec=mulvec(pvec, 1+(g/lenvec(pvec)));
             pvec=addvec(pvec, o); // add origin
             P[i].x=pvec.x // update point
             P[i].y=pvec.y
@@ -331,8 +343,8 @@ $("#start").click(function(){
     P=initdot();
     E=initedge(P);
     r=rest(P,E);
-    //stopanimate=false;
-    //animate();
+    stopanimate=false;
+    animate();
 	//$("#music")[0].play();
 })
 
