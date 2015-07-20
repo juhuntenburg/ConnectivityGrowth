@@ -60,10 +60,11 @@ function initdot() {
     for (i=0; i<ndot; i++) {
         var p={}; // single dot
         // perimeter ellipse:
-        // 2*Math.PI*Math.sqrt((Math.pow(skew, 2)+Math.pow(1, 2))/2)
-        // divide surface in equal pieces depending on number of dots
+        //peri= 2*Math.PI*Math.sqrt((Math.pow(rad_major, 2)+Math.pow(rad_minor, 2))/2)
         p.x=o.x+rad_major*Math.cos(i/ndot*2*Math.PI);
         p.y=o.y+rad_minor*Math.sin(i/ndot*2*Math.PI);
+        //find intersection of this vector with ellipse?
+
         p.n=[];
         P.push(p);
         dot=makeSVG('circle', {id:"p"+i, cx:p.x, cy:p.y, r:dotrad, fill:"grey", stroke:"grey"});
@@ -150,7 +151,7 @@ function avglocalefficiency(Gx) {
 // function to animate growth
 function animate() {
 
-    // update smallest radius
+    // update radius
     rad_minor=rad_minor*(1+(g/rad_minor));
     rad_major=rad_major*(1+(g/rad_major));
     //var  new_rad_minor=Math.sqrt(Math.pow((skewx*new_rad*Math.cos(Math.PI/2)),2)+Math.pow((skewy*new_rad*Math.sin(Math.PI/2)),2))
@@ -158,7 +159,7 @@ function animate() {
     //var new_rad = lenvec(subvec(P[E[0].a],o));
 
     // break loop if flag is true or radius exceeds threshold
-    if (rad_major>stoprad*rad || stopanimate==true) {
+    if (rad_minor>stoprad*rad || stopanimate==true) {
         return P;
     } else {
         requestAnimationFrame(animate);
@@ -168,7 +169,7 @@ function animate() {
             if (l>=2*r) {
                 var newp=addvec(subvec(P[E[i].a],o), subvec(P[E[i].b],o)); // vector between neighbouring points
                 var len_newp=lenvec(newp); // calculating length of new vector
-                newp=mulvec(newp, 1/len_newp); // divide by length to  get only direction
+                newp=mulvec(newp, 1/len_newp); // divide by length to get only direction
 
                 // calculate angle of new point via normalized vector
                 theta_newp=Math.atan2(newp.y, newp.x)
@@ -200,6 +201,7 @@ function animate() {
         };
 
         // grow, update dots
+        // THIS NEEDS TO BE FIXED FOR ELLIPSE SO THAT X AND Y GROW INDEPENDENTLY
         for (i=0; i<P.length; i++) {
             var pvec=subvec(P[i], o); // vector from origin to point
             pvec=mulvec(pvec, 1+(g/lenvec(pvec))); // make vector grow
@@ -271,9 +273,9 @@ $("#start").click(function(){
     P=initdot();
     E=initedge(P);
     r=rest(P,E);
-    stopanimate=false;
-    animate();
-	$("#music")[0].play();
+    //stopanimate=false;
+    //animate();
+	//$("#music")[0].play();
 })
 
 $("#stop").click(function(){
@@ -289,7 +291,7 @@ $("#cont").click(function(){
     dist=parseFloat($("#dist").val());
     stopanimate=false;
     animate();
-	$("#music")[0].play();
+	//$("#music")[0].play();
 });
 
 $("#compute").click(function(){
