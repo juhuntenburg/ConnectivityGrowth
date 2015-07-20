@@ -3,12 +3,12 @@ var P=[]; // list of dots
 var E=[]; // list of edges
 var w=$("#svg").attr("width");
 var h=$("#svg").attr("height");
-var rad=20; // initial minor radius of the model
-var skew=1 // skewness in x direction
-var rad_minor=rad
+var rad=100.6584; // initial minor radius of the model
+var skew=2 // skewness in x direction
+var rad_minor=rad;
 var rad_major=skew*rad
 var dotrad=3; // radius of the dots
-var ndot=4; //number of initial dots
+var ndot=20; //number of initial dots
 var o={"x":w/2, "y":h/2}; //origin
 var g=0.5; //growth
 var prob=0.01; //probability of connection to form
@@ -53,18 +53,59 @@ function addvec(a, b) {
     return {"x":a.x+b.x, "y":a.y+b.y};
 }
 
-// function to initiate dots
-// THIS NEEDS TO BE FIXED FOR ELLIPSES!
-function initdot() {
-    // initiate dots
-    for (i=0; i<ndot; i++) {
-        var p={}; // single dot
-        // perimeter ellipse:
-        //peri= 2*Math.PI*Math.sqrt((Math.pow(rad_major, 2)+Math.pow(rad_minor, 2))/2)
-        p.x=o.x+rad_major*Math.cos(i/ndot*2*Math.PI);
-        p.y=o.y+rad_minor*Math.sin(i/ndot*2*Math.PI);
-        //find intersection of this vector with ellipse?
 
+function initdot() {
+    // calculate perimeter
+    var peri = 2*Math.PI*Math.sqrt((Math.pow(rad_major, 2)+Math.pow(rad_minor, 2))/2)
+    // divide by number of points to derive the length of every arc
+    var diff = 0
+    var alpha = 0
+    var arc_len = 0
+    var delta = 0.00001
+    var p0 = {'x':o.x+rad_major,
+              'y':o.y+0}
+    // for each point
+    for (i=0; i<ndot; i++) {
+        // set the desired arc length for this point
+        var arc_goal = i*peri/ndot
+        console.log(arc_goal);
+        // calculate current point
+        var p = {'x':o.x+rad_major*Math.cos(alpha),
+                 'y':o.y+rad_minor*Math.sin(alpha)}
+
+        // calculate current length of arc
+        arc_len = arc_len + Math.sqrt(Math.pow((p.x-p0.x),2) + Math.pow((p.y-p0.y),2));
+        // if this is below the desried length
+        while (arc_len < arc_goal){
+            // store difference to desired length for case of overshoot
+            //diff = arc_goal - arc_len;
+            // make current point the new p0
+            //p0.x = o.x+rad_major*Math.cos(alpha);
+            //p0.y = o.y+rad_minor*Math.sin(alpha);
+            // increase angle by small step
+            p0.x=p.x;
+            p0.y=p.y;
+            alpha = alpha + delta;
+            // calculate new point on ellipse from this angle
+            p.x = o.x+rad_major*Math.cos(alpha);
+            p.y = o.y+rad_minor*Math.sin(alpha);
+            // update arclength
+            arc_len = arc_len + Math.sqrt(Math.pow((p.x-p0.x),2) + Math.pow((p.y-p0.y),2));
+        };
+        console.log(arc_len, alpha*180/Math.PI);
+        // when the desired arc length has been overshot
+        //if (arc_len > arc_goal) {
+            // calculate overshoot
+        //    new_diff = arc_len - arc_goal;
+            // compare overshoot to last undershoot
+        //    new_delta = delta/(diff+new_diff)*diff;
+            // multiply delta by this ration and recalculate p
+        //    alpha = alpha - delta;
+        //    alpha = alpha + new_delta;
+        //    p.x = o.x+rad_major*Math.cos(alpha);
+        //    p.y = o.y+rad_minor*Math.sin(alpha);
+        //};
+        // add dot to list and to svg
         p.n=[];
         P.push(p);
         dot=makeSVG('circle', {id:"p"+i, cx:p.x, cy:p.y, r:dotrad, fill:"grey", stroke:"grey"});
@@ -72,6 +113,23 @@ function initdot() {
     };
     return P
 };
+
+
+// function to initiate dots
+// THIS NEEDS TO BE FIXED FOR ELLIPSES!
+//function initdot() {
+    // initiate dots
+//    for (i=0; i<ndot; i++) {
+//        var p={}; // single dot
+//        p.x=o.x+rad_major*Math.cos(i/ndot*2*Math.PI);
+//        p.y=o.y+rad_minor*Math.sin(i/ndot*2*Math.PI);
+//        p.n=[];
+//        P.push(p);
+//        dot=makeSVG('circle', {id:"p"+i, cx:p.x, cy:p.y, r:dotrad, fill:"grey", stroke:"grey"});
+//        $("#svg")[0].appendChild(dot);
+//    };
+//    return P
+//};
 
 // function to initiate edges
 function initedge(P) {
