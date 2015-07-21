@@ -7,13 +7,13 @@ var rad=10; // initial minor radius of the model
 var skew=2 // skewness in x direction
 var rad_minor=rad;
 var rad_major=skew*rad
-var dotrad=3; // radius of the dots
-var ndot=6; //number of initial dots
+var dotrad=1; // radius of the dots
+var ndot=20; //number of initial dots
 var o={"x":w/2, "y":h/2}; //origin
 var g=0.01; //growth
 var prob=0.01; //probability of connection to form
 var stoprad=30 // to multiply by rad for stopping point
-var dist=4 // max distance of connections to form
+var dist=6 // max distance of connections to form (multiplied by resting length)
 var nclust=3; // number of cluster for k-means in vis
 var G=[];
 
@@ -182,7 +182,6 @@ function rest(P,E) {
  // see: http://nbviewer.ipython.org/github/deep-introspection/My-Random-Notebooks/blob/master/Growing%20networks.ipynb
  function graphMetrics(P) {
      G = new jsnx.Graph();
-     var i;
      for (i=0; i<P.length; i++) {
          G.addNodesFrom([i])
          var j;
@@ -198,7 +197,6 @@ function rest(P,E) {
 
 function globalefficiency(G) {
     var inv_lengths = [];
-    var node;
     for (node=0; node<G.numberOfNodes(); node++) {
         lengths = jsnx.singleSourceShortestPathLength(G,node)._numberValues;
         //lengths = lengths[0];
@@ -235,11 +233,8 @@ function avglocalefficiency(Gx) {
 // function to animate growth
 function animate() {
     // update radius
-    rad_minor=rad_minor*(1+g);
-    rad_major=rad_major*(1+g);
-    //rad_minor=rad_minor*(1+(g/lenvec(pvec)));
-    //rad_minor=rad_minor*(1+(g/lenvec(pvec)));
-    //var new_rad = lenvec(subvec(P[E[0].a],o));
+    rad_major=lenvec(subvec(P[E[0].a],o));
+    rad_minor=rad_major/skew
 
     // break loop if flag is true or radius exceeds threshold
     if (rad_major>stoprad*rad || stopanimate==true) {
@@ -268,7 +263,7 @@ function animate() {
                     // divide by length to get only direction
                     newp=mulvec(newp, 1/len_newp);
                     // multiply by current radius
-                    newp=mulvec(newp,rad_minor);
+                    newp=mulvec(newp,rad_major);
                     newp=addvec(newp,o); // add origin
                 } else if (rad_minor < rad_major){
                     var newp0 = {'x':P[E[i].a].x, 'y':P[E[i].a].y}
