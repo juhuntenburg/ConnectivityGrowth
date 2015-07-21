@@ -74,6 +74,7 @@ function equalPoints(p0, stopArc, ndot, delta) {
     var t = 0;
     var p = {'x':p0.x, 'y':p0.y}
     for (i=0; i<ndot; i++) {
+        // set the desired arc length for each dot
         var arcGoal = i*stopArc/ndot;
         while (arc < arcGoal){
             // update p0 to current point
@@ -83,55 +84,45 @@ function equalPoints(p0, stopArc, ndot, delta) {
             t += delta;
             // calculate new point on ellipse from this angle
             p = {'x':o.x+rad_major*Math.cos(t),
-                'y':o.y+rad_minor*Math.sin(t)}
+                 'y':o.y+rad_minor*Math.sin(t)}
             // update arc
             arc += lenvec(subvec(p,p0));
         };
         p.n=[];
         P.push(p);
-        dot=makeSVG('circle', {id:"p"+i, cx:p.x, cy:p.y, r:dotrad, fill:"grey", stroke:"grey"});
-        $("#svg")[0].appendChild(dot);
     };
     return P
 };
 
-// function to initiate dots for circular model
-function initdot_circle() {
-    // initiate dots
-    for (i=0; i<ndot; i++) {
-        var p={}; // single dot
-        // divide surface in equal pieces depending on number of dots
-        p.x=o.x+rad_minor*Math.cos(i/ndot*2*Math.PI);
-        p.y=o.y+rad_minor*Math.sin(i/ndot*2*Math.PI);
-        p.n=[];
-        P.push(p);
-        dot=makeSVG('circle', {id:"p"+i, cx:p.x, cy:p.y, r:dotrad, fill:"grey", stroke:"grey"});
-        $("#svg")[0].appendChild(dot);
-    };
-    return P
-};
-
-// function to initiate dots for ellipsoid model
-function initdot_ellipse() {
-    // approximate perimeter
-    var delta = 0.00001
-    var p0 = {'x':o.x+rad_major, 'y':o.y+0};
-    var peri = arcFromRad(p0=p0, delta=delta, stopRad=2*Math.PI);
-    // approximate positions of points and draw them
-    p0 = {'x':o.x+rad_major, 'y':o.y+0};
-    P = equalPoints(p0=p0, stopArc=peri, ndot=ndot, delta=delta);
-    return P
-};
-
-// metafunction to select which to use
+// function to initiate dots
 function initdot() {
+    // if the model is circular, points can be calculated from equal angles 2Pi/ndot
     if (rad_major==rad_minor) {
-        P=initdot_circle();
+        for (i=0; i<ndot; i++) {
+            // divide surface in equal pieces depending on number of dot
+            var p = {'x':o.x+rad_minor*Math.cos(i/ndot*2*Math.PI),
+                     'y':o.y+rad_minor*Math.sin(i/ndot*2*Math.PI),
+                     'n':[]};
+            P.push(p);
+        };
+    // if the model is an ellipse, the points have to be approximated numerically to divide the perimeter equally
     } else if (rad_major>=rad_minor) {
-        P=initdot_ellipse();
+        var delta = 0.00001
+        var p0 = {'x':o.x+rad_major, 'y':o.y+0};
+        var peri = arcFromRad(p0=p0, delta=delta, stopRad=2*Math.PI);
+        p0 = {'x':o.x+rad_major, 'y':o.y+0};
+        P = equalPoints(p0=p0, stopArc=peri, ndot=ndot, delta=delta);
     };
+    // draw the points
+    for (j=0; j<P.length; j++) {
+        p = P[j];
+        dot=makeSVG('circle', {id:"p"+j, cx:p.x, cy:p.y, r:dotrad, fill:"grey", stroke:"grey"});
+        $("#svg")[0].appendChild(dot);
+    }
+    // and return them for the edge function
     return P
 };
+
 
 // function to initiate edges
 function initedge(P) {
