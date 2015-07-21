@@ -54,11 +54,13 @@ function addvec(a, b) {
 }
 
 // function to approximate the arc length of an ellipse over a given radians
-function arcFromRad(p0, delta, stopRad) {
+function arcFromRad(p0, delta, stopRad, startRad) {
     var arc = 0;
-    var p = {};
-    var t = 0;
-    for(t=0;t<=stopRad;t+=delta) {
+    if (typeof(startRad)==='undefined') {
+        var t0 = 0; } else {
+            var t0=startRad;
+        }
+    for(t=t0;t<=stopRad;t+=delta) {
         var p = {x:o.x+rad_major*Math.cos(t),y:o.y+rad_minor*Math.sin(t)};
         arc += lenvec(subvec(p,p0));
         p0.x = p.x;
@@ -68,15 +70,22 @@ function arcFromRad(p0, delta, stopRad) {
 };
 
 // function to produce evenly spaced dots on a given arc of an ellipse
-function equalPoints(p0, stopArc, ndot, delta) {
-    var P = [];
+function equalPoints(p0, stopArc, ndot, delta, startRad) {
+    var eP = [];
     var arc = 0;
-    var t = 0;
+    if (typeof(startRad)==='undefined') {
+        var t = 0 }
+    else {
+        var t=startRad;
+    };
     var p = {'x':p0.x, 'y':p0.y}
+    var i;
     for (i=0; i<ndot; i++) {
         // set the desired arc length for each dot
         var arcGoal = i*stopArc/ndot;
         while (arc < arcGoal){
+            // store diff
+            var diff = arcGoal - arc;
             // update p0 to current point
             p0.x=p.x;
             p0.y=p.y;
@@ -88,16 +97,29 @@ function equalPoints(p0, stopArc, ndot, delta) {
             // update arc
             arc += lenvec(subvec(p,p0));
         };
+        // if there is an overshoot
+        if (arc > arcGoal) {
+            new_diff = arc - arcGoal;
+            // compare overshoot to last undershoot
+            new_delta = delta/(diff+new_diff)*diff;
+            // correct delta and recalculate p
+            t -= delta;
+            t += new_delta;
+            p = {'x':o.x+rad_major*Math.cos(t),
+                 'y':o.y+rad_minor*Math.sin(t)}
+        };
         p.n=[];
-        P.push(p);
+        p.t=t;
+        eP.push(p);
     };
-    return P
+    return eP
 };
 
 // function to initiate dots
 function initdot() {
     // if the model is circular, points can be calculated from equal angles 2Pi/ndot
     if (rad_major==rad_minor) {
+        var i;
         for (i=0; i<ndot; i++) {
             // divide surface in equal pieces depending on number of dot
             var p = {'x':o.x+rad_minor*Math.cos(i/ndot*2*Math.PI),
@@ -114,6 +136,7 @@ function initdot() {
         P = equalPoints(p0=p0, stopArc=peri, ndot=ndot, delta=delta);
     };
     // draw the points
+    var j;
     for (j=0; j<P.length; j++) {
         p = P[j];
         dot=makeSVG('circle', {id:"p"+j, cx:p.x, cy:p.y, r:dotrad, fill:"grey", stroke:"grey"});
@@ -127,6 +150,7 @@ function initdot() {
 // function to initiate edges
 function initedge(P) {
     // initiate edges
+    var i;
     for (i=0; i<P.length; i++) {
         var e={};
         if (i<ndot-1)
@@ -143,17 +167,25 @@ function initedge(P) {
 // function to get resting edge length
 function rest(P,E) {
     //this only works if all dots are equally spaced
-     var r = lenvec(subvec(P[E[0].a], P[E[0].b]));
+    if (rad_minor == rad_major){
+        var r = lenvec(subvec(P[E[0].a], P[E[0].b]));
+    } else if (rad_minor < rad_major) {
+        p0 = {'x':P[E[0].a].x, 'y':P[E[0].a].y};
+        delta = 0.00001;
+        peri = arcFromRad(p0=p0, delta=delta, stopRad=2*Math.PI)
+        var r = peri/ndot;
+    };
      return r;
  };
-
 
  // functions to calculate network measures:
  // see: http://nbviewer.ipython.org/github/deep-introspection/My-Random-Notebooks/blob/master/Growing%20networks.ipynb
  function graphMetrics(P) {
      G = new jsnx.Graph();
+     var i;
      for (i=0; i<P.length; i++) {
          G.addNodesFrom([i])
+         var j;
          for (j=0; j<P[i].n.length; j++) {
              G.addEdgesFrom([[i,P[i].n[j]]])
          }
@@ -166,6 +198,7 @@ function rest(P,E) {
 
 function globalefficiency(G) {
     var inv_lengths = [];
+    var node;
     for (node=0; node<G.numberOfNodes(); node++) {
         lengths = jsnx.singleSourceShortestPathLength(G,node)._numberValues;
         //lengths = lengths[0];
@@ -201,7 +234,6 @@ function avglocalefficiency(Gx) {
 
 // function to animate growth
 function animate() {
-
     // update radius
     rad_minor=rad_minor*(1+g);
     rad_major=rad_major*(1+g);
@@ -214,22 +246,36 @@ function animate() {
         return P;
     } else {
         requestAnimationFrame(animate);
+        var i;
         for (i=0; i<E.length; i++) {
+            delta=0.01
             // inserting new points if required
-            var l = lenvec(subvec(P[E[i].a], P[E[i].b])); // calculating edge length
-/*            if (l>=2*r) {
-                var newp=addvec(subvec(P[E[i].a],o), subvec(P[E[i].b],o)); // vector between neighbouring points
-                var len_newp=lenvec(newp); // calculating length of new vector
-                newp=mulvec(newp, 1/len_newp); // divide by length to get only direction
-
-                // calculate angle of new point via normalized vector
-                theta_newp=Math.atan2(newp.y, newp.x)
-                // calculate radius at the new point
-                rad_newp=Math.sqrt(Math.pow((rad_major*Math.cos(theta_newp)),2)+Math.pow((rad_minor*Math.sin(theta_newp)),2))
-                newp=mulvec(newp,rad_newp);  // multiply by radius at this angle
-                //newp=mulvec(newp,new_rad);  // multiply by current radius
-
-                newp=addvec(newp,o); // add origin
+            // calculating edge length
+            if (rad_minor==rad_major){
+                var l = lenvec(subvec(P[E[i].a], P[E[i].b]));
+            } else if (rad_minor < rad_major){
+                p0 = {'x':P[E[i].a].x, 'y':P[E[i].a].y}
+                if (P[E[i].b].t > 0) {var stopRad=P[E[i].b].t
+                } else {var stopRad=2*Math.PI};
+                var l = arcFromRad(p0=p0, delta=delta, stopRad=stopRad, startRad=P[E[i].a].t)
+            };
+            if (l>=2*r) {
+                if (rad_minor == rad_major) {
+                    // vector between neighbouring points
+                    var newp=addvec(subvec(P[E[i].a],o), subvec(P[E[i].b],o));
+                    // calculating length of new vector
+                    var len_newp=lenvec(newp);
+                    // divide by length to get only direction
+                    newp=mulvec(newp, 1/len_newp);
+                    // multiply by current radius
+                    newp=mulvec(newp,rad_minor);
+                    newp=addvec(newp,o); // add origin
+                } else if (rad_minor < rad_major){
+                    var newp0 = {'x':P[E[i].a].x, 'y':P[E[i].a].y}
+                    delta=0.0001
+                    newP = equalPoints(p0=newp0, stopArc=l, ndot=2, delta=delta, startRad=P[E[i].a].t);
+                    var newp=newP[1];
+                };
                 newp.n=[]; // add empty neighbour lis
                 P.push(newp); // new point is added to the end of the list
                 E.push({"a":P.length-1, "b":E[i].b})// add new edge from newpoint to i+1
@@ -248,7 +294,7 @@ function animate() {
                 // add new edges
                 line=makeSVG('line', {id:"e"+(E.length-1), x1:P[E[E.length-1].a].x, y1:P[E[E.length-1].a].y, x2:P[E[E.length-1].b].x, y2:P[E[E.length-1].b].y, stroke:"grey"});
                 $("#svg")[0].appendChild(line);
-            };*/
+            };
         };
 
         // grow, update dots
