@@ -53,7 +53,49 @@ function addvec(a, b) {
     return {"x":a.x+b.x, "y":a.y+b.y};
 }
 
-// functions to initiate dots for circular model
+// function to approximate the arc length of an ellipse over a given radians
+function arcFromRad(p0, delta, stopRad) {
+    var arc = 0;
+    var p = {};
+    var t = 0;
+    for(t=0;t<=stopRad;t+=delta) {
+        var p = {x:o.x+rad_major*Math.cos(t),y:o.y+rad_minor*Math.sin(t)};
+        arc += lenvec(subvec(p,p0));
+        p0.x = p.x;
+        p0.y = p.y;
+    };
+    return arc
+};
+
+// function to produce evenly spaced dots on a given arc of an ellipse
+function equalPoints(p0, stopArc, ndot, delta) {
+    var P = [];
+    var arc = 0;
+    var t = 0;
+    var p = {'x':p0.x, 'y':p0.y}
+    for (i=0; i<ndot; i++) {
+        var arcGoal = i*stopArc/ndot;
+        while (arc < arcGoal){
+            // update p0 to current point
+            p0.x=p.x;
+            p0.y=p.y;
+            // increase angle
+            t += delta;
+            // calculate new point on ellipse from this angle
+            p = {'x':o.x+rad_major*Math.cos(t),
+                'y':o.y+rad_minor*Math.sin(t)}
+            // update arc
+            arc += lenvec(subvec(p,p0));
+        };
+        p.n=[];
+        P.push(p);
+        dot=makeSVG('circle', {id:"p"+i, cx:p.x, cy:p.y, r:dotrad, fill:"grey", stroke:"grey"});
+        $("#svg")[0].appendChild(dot);
+    };
+    return P
+};
+
+// function to initiate dots for circular model
 function initdot_circle() {
     // initiate dots
     for (i=0; i<ndot; i++) {
@@ -71,65 +113,13 @@ function initdot_circle() {
 
 // function to initiate dots for ellipsoid model
 function initdot_ellipse() {
-    var diff = 0
-    var alpha = 0
-    var arc_len = 0
-    var delta = 0.00001
-
     // approximate perimeter
-    var peri=0;
+    var delta = 0.00001
     var p0 = {'x':o.x+rad_major, 'y':o.y+0};
-    for(t=0;t<=2*Math.PI;t+=delta) {
-        var p={x:o.x+rad_major*Math.cos(t),y:o.y+rad_minor*Math.sin(t)};
-        peri+=Math.sqrt(Math.pow(p.x-p0.x,2)+Math.pow(p.y-p0.y,2));
-        p0.x=p.x;
-        p0.y=p.y;
-    };
-
-    // reset starting point
-    p0 = {'x':o.x+rad_major,'y':o.y+0};
-    // approximate positions of points
-    for (i=0; i<ndot; i++) {
-        // set the desired arc length for this point
-        var arc_goal = i*peri/ndot
-        // calculate current point
-        var p = {'x':o.x+rad_major*Math.cos(alpha),
-                 'y':o.y+rad_minor*Math.sin(alpha)}
-        // calculate current length of arc
-        arc_len = arc_len + Math.sqrt(Math.pow((p.x-p0.x),2) + Math.pow((p.y-p0.y),2));
-        // if this is below the desried length
-        while (arc_len < arc_goal){
-            // store difference to desired length for case of overshoot
-            // diff = arc_goal - arc_len;
-            // make current point the new p0
-            p0.x=p.x;
-            p0.y=p.y;
-            // increase angle by small step
-            alpha = alpha + delta;
-            // calculate new point on ellipse from this angle
-            p.x = o.x+rad_major*Math.cos(alpha);
-            p.y = o.y+rad_minor*Math.sin(alpha);
-            // update arclength
-            arc_len = arc_len + Math.sqrt(Math.pow((p.x-p0.x),2) + Math.pow((p.y-p0.y),2));
-        };
-        // when the desired arc length has been overshot
-/*        if (arc_len > arc_goal) {
-            // calculate overshoot
-            new_diff = arc_len - arc_goal;
-            // compare overshoot to last undershoot
-            new_delta = delta/(diff+new_diff)*diff;
-            // multiply delta by this ration and recalculate p
-            alpha = alpha - delta;
-            alpha = alpha + new_delta;
-            p.x = o.x+rad_major*Math.cos(alpha);
-            p.y = o.y+rad_minor*Math.sin(alpha);
-        };*/
-        // add dot to list and to svg
-        p.n=[];
-        P.push(p);
-        dot=makeSVG('circle', {id:"p"+i, cx:p.x, cy:p.y, r:dotrad, fill:"grey", stroke:"grey"});
-        $("#svg")[0].appendChild(dot);
-    };
+    var peri = arcFromRad(p0=p0, delta=delta, stopRad=2*Math.PI);
+    // approximate positions of points and draw them
+    p0 = {'x':o.x+rad_major, 'y':o.y+0};
+    P = equalPoints(p0=p0, stopArc=peri, ndot=ndot, delta=delta);
     return P
 };
 
