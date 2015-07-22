@@ -1,21 +1,26 @@
-// parameters
-var P=[]; // list of dots
-var E=[]; // list of edges
+// global parameters
 var w=$("#svg").attr("width");
 var h=$("#svg").attr("height");
+var o={"x":w/2, "y":h/2}; //origin
 var rad=10; // initial minor radius of the model
-var skew=2 // skewness in x direction
+var skew=1.5 // skewness in x direction
 var rad_minor=rad;
 var rad_major=skew*rad
+var stoprad=h/2
 var dotrad=1; // radius of the dots
-var ndot=20; //number of initial dots
-var o={"x":w/2, "y":h/2}; //origin
-var g=0.01; //growth
-var prob=0.01; //probability of connection to form
-var stoprad=30 // to multiply by rad for stopping point
+var ndot=10; //number of initial dots
+
+var g=.02; //growth
+var prob=.01; //probability of connection to form
 var dist=6 // max distance of connections to form (multiplied by resting length)
+var young=.5; // young modulus for elasticity
+
 var nclust=3; // number of cluster for k-means in vis
-var G=[];
+
+// other global variables
+var P=[]; // list of dots
+var E=[]; // list of edges
+var G=[]; // graph
 
 // set default values for input
 $("#growth").val(g);
@@ -23,6 +28,7 @@ $("#nodes").val(ndot);
 $("#prob").val(prob);
 $("#dist").val(dist);
 $("#skew").val(skew);
+$("#young").val(young);
 $("#nclust").val(nclust);
 
 // function to add elements to SVG
@@ -178,6 +184,22 @@ function rest(P,E) {
      return r;
  };
 
+ // function to implement elasticity of vectors between origin and points
+ function elasticity(p0, p1) {
+     var p0=p0;
+     var p1=p1;
+     var r=lenvec(subvec(p0,o)); // resting length of spring
+     var d=subvec(p1,o);// vector from origin to new point (deformed spring)
+     var l=lenvec(d); // length of deformed spring
+     var a={} // acceleration
+     var f={} // force
+     var v={'x':0, 'y':0} // velocity
+     f=mulvec(d, (young*(r-l)/l)); // Hook's law F=-k*(r-l), divide by length to only get direction of vector
+     // shouldn't it be dependent on resting length instead of deformed length?
+     p1=addvec(p1, f); //Integration of velocity into position
+     return p1;
+ }
+
  // functions to calculate network measures:
  // see: http://nbviewer.ipython.org/github/deep-introspection/My-Random-Notebooks/blob/master/Growing%20networks.ipynb
  function graphMetrics(P) {
@@ -237,7 +259,7 @@ function animate() {
     rad_minor=rad_major/skew
 
     // break loop if flag is true or radius exceeds threshold
-    if (rad_major>stoprad*rad || stopanimate==true) {
+    if (rad_minor>=stoprad || stopanimate==true) {
         return P;
     } else {
         requestAnimationFrame(animate);
@@ -271,7 +293,7 @@ function animate() {
                     newP = equalPoints(p0=newp0, stopArc=l, ndot=2, delta=delta, startRad=P[E[i].a].t);
                     var newp=newP[1];
                 };
-                newp.n=[]; // add empty neighbour lis
+                newp.n=[]; // add empty neighbour list
                 P.push(newp); // new point is added to the end of the list
                 E.push({"a":P.length-1, "b":E[i].b})// add new edge from newpoint to i+1
                 E[i]={"a":E[i].a, "b":P.length-1} // updating edge from point i to newpoint (end of list)
@@ -298,6 +320,7 @@ function animate() {
             pvec=mulvec(pvec, 1+g); // make vector grow
             // pvec=mulvec(pvec, 1+(g/lenvec(pvec)));
             pvec=addvec(pvec, o); // add origin
+            pvec=elasticity(p0=P[i], p1=pvec)
             P[i].x=pvec.x // update point
             P[i].y=pvec.y
             $("#p"+i).attr("cx", P[i].x);
@@ -355,6 +378,7 @@ $("#start").click(function(){
     prob=parseFloat($("#prob").val());
     skew=parseFloat($("#skew").val());
     dist=parseFloat($("#dist").val());
+    young=parseFloat($("#young").val());
     stopanimate=false;
     $("#svg").empty();
     P=[];
