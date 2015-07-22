@@ -381,6 +381,8 @@ $("#start").click(function(){
     young=parseFloat($("#young").val());
     stopanimate=false;
     $("#svg").empty();
+    $("#matrix-div").empty();
+    $("#force-div").empty();
     P=[];
     E=[];
     G=[];
