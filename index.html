@@ -6,6 +6,10 @@
         <script src="jsnetworkx.js"></script>
         <script src="protovis.js"></script>
         <script src="figue.js"></script>
+        <script src="vectorfunctions.js"></script>
+        <script src="graphmetrics.js"></script>
+        <script src="makesvg.js"></script>
+
 </head>
 <body>
 	<audio id="music">
@@ -17,31 +21,12 @@
         <table  style="font:14px Garamond Serif">
             <tr><td>growth rate</td> <td><input style="font:12px Garamond" type="text" id="growth" maxlength="4" size="4"/></td></tr>
             <tr><td>initial nodes</td> <td><input style="font:12px Garamond" type="text" id="nodes" maxlength="4" size="4" /></td></tr>
-            <tr><td>p connection</td> <td><input style="font:12px Garamond" type="text" id="prob" maxlength="4" size="4"/></td></tr>
-            <tr><td>max distance</td> <td><input style="font:12px Garamond" type="text" id="dist" maxlength="4" size="4"/></td></tr>
-            <tr><td>skew</td> <td><input style="font:12px Garamond" type="text" id="skew" maxlength="4" size="4"/></td></tr>
-            <tr><td>young mod</td> <td><input style="font:12px Garamond" type="text" id="young" maxlength="4" size="4"/></td></tr>
+            <tr><td>eccentricity</td> <td><input style="font:12px Garamond" type="text" id="ecc" maxlength="4" size="4"/></td></tr>
             <tr><td></td><td></td></tr>
             <tr><td></td><td></td></tr>
             <tr>
                 <td><button id="start" style="font:12px Garamond">start</button></td>
                 <td><button id="stop" style="font:12px Garamond">stop</button></td>
-            </tr>
-            <tr><td><button id="cont" style="font:12px Garamond">continue</button></td><td></td></tr>
-        </table>
-        <h4>Stats</h4>
-        <table  style="font:14px Garamond Serif">
-            <tr><td>cluster</td><td><input type="text" id="nclust" style="font:12px Garamond" maxlength="3" size="3"/></td></tr>
-            <tr>
-                <td><button id="compute" style="font:12px Garamond">compute</button></td>
-                <td><button id="vis" style="font:12px Garamond">vis</button></td>
-            </tr>
-            <tr><td><button id="download" style="font:12px Garamond">download</button></td><td></td></tr>
-            <tr><td></td><td></td></tr>
-            <tr><td></td><td></td></tr>
-		</table>
-        <table>
-            <tr><span id="stats" style="font:12px Garamond"></span></tr>
         </table>
     </div>
 
