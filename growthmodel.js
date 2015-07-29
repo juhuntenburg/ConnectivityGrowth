@@ -2,6 +2,7 @@
 var w = $("#svg").attr("width");
 var h = $("#svg").attr("height");
 var o = {"x":w/2, "y":h/2}; //origin of the model
+// adapt to throw error when input is not 0<=ecc<1
 var ecc = 0.8; // eccentricity of ellipse, 0 is a circle
 var rad_minor = 100; // initial minor radius of the model
 var rad_major = Math.sqrt(Math.pow(rad_minor,2)/(1-Math.pow(ecc,2))) // major radius from minor radius and eccentricity
@@ -103,78 +104,35 @@ function initDot() {
 
 
 // function to animate growth
-function animate() {
-    // update radius
-    rad_major=lenvec(subvec(P[E[0].a],o));
-    rad_minor=rad_major/skew
+/*function animate() {
+    requestAnimationFrame(animate);
+    var i;
+    for (i=0; i<surf.v.length; i++) {
+        var p1, p2, e, e_len, m, f;
+        // find point i and its following neighbour on the surface
+        p1 = {'x':surf.v[i].x, 'y':surf.v[i].y};
+        if (i=surf.v.length-1) {
+            p2 = {'x':surf.v[0].x, 'y':surf.v[0].y};
+        } else {p2 = {'x':surf.v[i].x, 'y':surf.v[i].y}};
+        // find edge as directional vector from p1 to p2
+        e = subvec(p2, p1);
+        // length of this vector, resting spring
+        e_len = lenvec(e);
+        // make e direction only
+        e = mulvec(e, (1/e_len);
+        // midpoint between p1 and p2
+        m = addvec(p1, mulvec(e, (1/2*e_len)));
+        // force due to growth
+        f = mulvec(e, (e_len/2*(1+g)));
+        // new point p1 and p2
+        p1 = addvec(m, f);
+        p2 = subvec(m, f);
 
-    // break loop if flag is true or radius exceeds threshold
-    if (rad_major>stoprad*rad || stopanimate==true) {
-        return P;
-    } else {
-        requestAnimationFrame(animate);
-        var i;
-        for (i=0; i<E.length; i++) {
-            delta=0.01
-            // inserting new points if required
-            // calculating edge length
-            if (rad_minor==rad_major){
-                var l = lenvec(subvec(P[E[i].a], P[E[i].b]));
-            } else if (rad_minor < rad_major){
-                p0 = {'x':P[E[i].a].x, 'y':P[E[i].a].y}
-                if (P[E[i].b].t > 0) {var stopRad=P[E[i].b].t
-                } else {var stopRad=2*Math.PI};
-                var l = arcFromRad(p0=p0, delta=delta, stopRad=stopRad, startRad=P[E[i].a].t)
-            };
-            if (l>=2*r) {
-                if (rad_minor == rad_major) {
-                    // vector between neighbouring points
-                    var newp=addvec(subvec(P[E[i].a],o), subvec(P[E[i].b],o));
-                    // calculating length of new vector
-                    var len_newp=lenvec(newp);
-                    // divide by length to get only direction
-                    newp=mulvec(newp, 1/len_newp);
-                    // multiply by current radius
-                    newp=mulvec(newp,rad_major);
-                    newp=addvec(newp,o); // add origin
-                } else if (rad_minor < rad_major){
-                    var newp0 = {'x':P[E[i].a].x, 'y':P[E[i].a].y}
-                    delta=0.0001
-                    newP = equalPoints(p0=newp0, stopArc=l, ndot=2, delta=delta, startRad=P[E[i].a].t);
-                    var newp=newP[1];
-                };
-                newp.n=[]; // add empty neighbour lis
-                P.push(newp); // new point is added to the end of the list
-                E.push({"a":P.length-1, "b":E[i].b})// add new edge from newpoint to i+1
-                E[i]={"a":E[i].a, "b":P.length-1} // updating edge from point i to newpoint (end of list)
-
-                // add new dots
-                dot=makeSVG('circle', {id:"p"+(P.length-1), cx:P[P.length-1].x, cy:P[P.length-1].y, r:dotrad, fill:"grey", stroke:"grey"});
-                $("#svg")[0].appendChild(dot);
-
-                // update first edge
-                $("#e"+i).attr("x1", P[E[i].a].x);
-                $("#e"+i).attr("y1", P[E[i].a].y);
-                $("#e"+i).attr("x2", P[E[i].b].x);
-                $("#e"+i).attr("y2", P[E[i].b].y);
-
-                // add new edges
-                line=makeSVG('line', {id:"e"+(E.length-1), x1:P[E[E.length-1].a].x, y1:P[E[E.length-1].a].y, x2:P[E[E.length-1].b].x, y2:P[E[E.length-1].b].y, stroke:"grey"});
-                $("#svg")[0].appendChild(line);
-            };
-        };
-
-        // grow, update dots
-        for (i=0; i<P.length; i++) {
-            var pvec=subvec(P[i], o); // vector from origin to point
-            pvec=mulvec(pvec, 1+g); // make vector grow
-            // pvec=mulvec(pvec, 1+(g/lenvec(pvec)));
-            pvec=addvec(pvec, o); // add origin
-            P[i].x=pvec.x // update point
-            P[i].y=pvec.y
-            $("#p"+i).attr("cx", P[i].x);
-            $("#p"+i).attr("cy", P[i].y);
-        };
+        P[i].x=pvec.x // update point
+        P[i].y=pvec.y
+        $("#p"+i).attr("cx", P[i].x);
+        $("#p"+i).attr("cy", P[i].y);
+    };
 
         // update edges
         for (i=0; i<E.length; i++) {
@@ -184,39 +142,9 @@ function animate() {
             $("#e"+i).attr("x2", P[E[i].b].x);
             $("#e"+i).attr("y2", P[E[i].b].y);
         };
-        // make new connections
-        for (i=0; i<P.length; i++) {
-            //compute distance to other dots
-            for (j=0; j<P.length; j++) {
-                // for each dot go through all dots that have a higher index and update connections
-                // if there is no connection yet between the dots, draw one in case the distance is smaller than a threshold
-                if (i<j) {
-                    // for non-existing connections, calculate length
-                    if ($.inArray(j, P[i].n)==-1) {
-                        var connvec = subvec(P[j],P[i]);
-                        var connlen = lenvec(connvec);
-                        if (connlen <= dist*r) {
-                            // roll a dice if connection will be drawn
-                            dice=Math.random()
-                            if (dice <= prob) {
-                                P[i].n.push(j);
-                                connection=makeSVG('line', {id:"c"+i+j, x1:P[i].x, y1:P[i].y, x2:P[j].x, y2:P[j].y, stroke:"red"});
-                                $("#svg")[0].appendChild(connection);
-                            }
-                        };
-                    // update existing connections
-                    } else {
-                        $("#c"+i+j).attr("x1", P[i].x);
-                        $("#c"+i+j).attr("y1", P[i].y);
-                        $("#c"+i+j).attr("x2", P[j].x);
-                        $("#c"+i+j).attr("y2", P[j].y);
-                    };
-                };
-            };
-        };
-    };
-};
 
+};
+*/
 var stopanimate=true;
 
 // update values from input if applicable and animate upon set
@@ -240,13 +168,9 @@ $("#stop").click(function(){
 	$("#music")[0].pause();
 })
 
-// double check if values rest, and rads don't need to be updated here
 $("#cont").click(function(){
     g=parseFloat($("#growth").val());
     ndot=parseFloat($("#nodes").val());
-    prob=parseFloat($("#prob").val());
-    dist=parseFloat($("#dist").val());
-    stopanimate=false;
     animate();
 	//$("#music")[0].play();
 });
