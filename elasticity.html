@@ -1,0 +1,167 @@
+<html>
+<head>
+        <title>elasticity</title>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+</head>
+<body>
+
+    <div style="position: absolute; box-shadow: 3px 3px 5px 5px #ccc; padding: 10px; background-color:rgba(255,255,255,0.7); z-index: 10">
+        <h3>elasticity</h2>
+        <table>
+            <tr><td>Young's modulus:</td> <td><input type="text" id="young" maxlength="4" size="4"/></td></tr>
+            <tr><td>Friction: </td> <td><input type="text" id="friction" maxlength="4" size="4" /></td></tr>
+            <tr><td>Timestep: </td> <td><input type="text" id="time" maxlength="4" size="4"/></td></tr>
+            <tr><td>Gravity: </td> <td><input type="text" id="gravity" maxlength="4" size="4" /></td></tr>
+            <tr><td>Mass: </td> <td><input type="text" id="mass" maxlength="4" size="4" /></td></tr>
+        </table>
+        <button id="set">Set</button>
+    </div>
+
+    <div>
+    	<svg width="800" height="400" id="mainsvg"> 
+    		<circle r="5" stroke="grey" stroke-width="1" fill="grey" id="orig"/>
+    		<line stroke="grey" stroke-width="1" id="line"/>
+    		<circle r="10" stroke="black" stroke-width="2" fill="black" id="dot"/>
+        </svg>
+    </div>
+
+
+
+    <script>
+
+    //// functions ////
+
+	//function to subtract two vectors
+    function subvec(a,b) {
+    	return {"x":a.x-b.x, "y":a.y-b.y}
+    }
+
+    //function calculate length of vector
+    function lenvec(a) {
+    	return Math.sqrt(Math.pow(a.x, 2)+Math.pow(a.y, 2))
+    }
+
+    //function to multiply vector a with constant k
+    function mulvec(a, k) {
+        return {"x":a.x*k, "y":a.y*k};
+    }
+
+    //function to multiply vector a with constant k
+    function addvec(a, b) {
+        return {"x":a.x+b.x, "y":a.y+b.y};
+    }
+
+    // function to initiate elements
+    function init() {
+    	// set central point and start of line
+    	var o={"x":width/2, "y":height/2}
+		$("#orig").attr("cx", o.x);
+    	$("#orig").attr("cy", o.y);
+    	$("#line").attr("x1", o.x);
+    	$("#line").attr("y1", o.y);
+
+    	// set second dot randomly positioned within half-frame distance to centre and end of line
+		var p={"x":(width/2 + Math.floor(Math.random()*width/2)-(width/4)),
+			   "y":(height/2 + Math.floor(Math.random()*height/2)-(height/4))}
+    	$("#dot").attr("cx", p.x);
+    	$("#dot").attr("cy", p.y);
+    	$("#line").attr("x2", p.x);
+    	$("#line").attr("y2", p.y);
+
+        // set default values for input
+        $("#young").val(k);
+        $("#friction").val(fric);
+        $("#time").val(dt);
+        $("#mass").val(m);
+        $("#gravity").val(grav);
+
+    	return [o, p];
+    };
+
+    // function to animate elasticity following Hook's law
+    function animate() {
+        if (flag==false){
+        	requestAnimationFrame(animate);
+	    	var d=subvec(p1,o); // vector from origin to new point p1 (deformed spring)
+            var l=lenvec(d); // length of deformed spring
+            var a={} // acceleration
+            var f={} // force
+            var fe={} // elastic force
+            var g={"x":0, "y":grav}; // gravity
+            fe=mulvec(d, (k*(r-l)/l)); // Hook's law F=-k*(r-l)
+            f=addvec(fe,g); // total force
+            a = mulvec(f, 1/m); // Newton's second law of motion F=m*a
+            v=addvec(v,mulvec(a,dt)); // Integration of acceleration into velocity
+            v=mulvec(v,fric); // adding friction
+            p1=addvec(p1, mulvec(v, dt)); //Integration of velocity into position
+			$("#dot").attr("cx", p1.x);
+	    	$("#dot").attr("cy", p1.y);
+	    	$("#line").attr("x2", p1.x);
+	    	$("#line").attr("y2", p1.y);
+        };
+	};
+
+
+
+    //// actions /////
+
+
+    // set inital values
+    var v={"x":0, "y":0}; // velocity
+    var m=100 // mass
+    var dt=1 // time step
+    var fric=0.99 // friction
+    var k=50; // Young's modulus
+    var grav=10 // gravity
+
+    // update values from input if applicable
+    $("#set").click(function(){
+        k=parseFloat($("#young").val());
+        fric=parseFloat($("#friction").val());
+        dt=parseFloat($("#time").val())
+        grav=parseFloat($("#gravity").val())
+        m=parseFloat($("#mass").val())
+    })
+
+    // get size of main svg frame and dot radius
+    var width=$("#mainsvg").attr("width")
+    var height=$("#mainsvg").attr("height")
+    var rad=$("#dot").attr("r");
+
+    // initiate
+    var dots = init();
+    var o=dots[0];
+    var p0=dots[1];
+	var r=lenvec(subvec(o,p0));
+
+    // prevent dot position updating when mouse up
+    var flag=false;
+    $("svg").mouseup(function(e){
+     	e.preventDefault();
+    	e.stopPropagation();
+    	flag=false;
+
+    	// and animate
+    	animate();
+    });
+
+    // update dot and line end position when mouse down and moving
+    var p1 = $("svg").on("mousedown mousemove", function(e){
+    		e.preventDefault();
+    		e.stopPropagation();
+    		if (e.type=="mousedown")
+    			flag=true;
+    		if (flag==true) {
+    			p1={"x":e.clientX-rad, "y":e.clientY-rad};
+				$("#dot").attr("cx", p1.x);
+				$("#dot").attr("cy", p1.y);
+				$("#line").attr("x2", p1.x);
+				$("#line").attr("y2", p1.y);
+                v={"x":0, "y":0};
+    			return p1
+    		};
+	});
+
+    </script>
+</body>
+
